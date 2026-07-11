@@ -23,7 +23,13 @@ public struct RuleEngine {
     }
 
     public static func loadBundledRules() throws -> [Rule] {
-        guard let url = Bundle.module.url(forResource: "rules", withExtension: "json") else {
+        // Packaged .app: rules.json is copied to Contents/Resources by scripts/bundle.sh,
+        // which Bundle.main resolves directly. Only fall back to Bundle.module (SwiftPM's
+        // resource bundle) for `swift test`/`swift run`, where Bundle.main is the test
+        // runner / dev binary and has no rules.json of its own.
+        let url = Bundle.main.url(forResource: "rules", withExtension: "json")
+            ?? Bundle.module.url(forResource: "rules", withExtension: "json")
+        guard let url else {
             throw CocoaError(.fileNoSuchFile)
         }
         return try JSONDecoder().decode([Rule].self, from: Data(contentsOf: url))

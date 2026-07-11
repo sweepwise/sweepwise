@@ -10,12 +10,11 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
 cp .build/release/Cleanium "$APP/Contents/MacOS/Cleanium"
-# SwiftPM's generated Bundle.module accessor looks for the resource bundle at
-# Bundle.main.bundleURL (the .app root), not next to the executable — verified
-# empirically: placing it under Contents/MacOS or Contents/Resources makes
-# Bundle.module fail to resolve and fatalError once .build/ isn't present.
-cp -R .build/release/Cleanium_CleaniumCore.bundle "$APP/" 2>/dev/null \
-  || cp -R .build/release/*.bundle "$APP/"
+# RuleEngine.loadBundledRules() looks up rules.json via Bundle.main first, which
+# resolves the standard Contents/Resources location for a packaged .app — so we
+# ship the plain resource there instead of relying on SwiftPM's Bundle.module bundle.
+mkdir -p "$APP/Contents/Resources"
+cp Sources/CleaniumCore/Resources/rules.json "$APP/Contents/Resources/rules.json"
 
 cat > "$APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -34,10 +33,5 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 </plist>
 PLIST
 
-# codesign refuses to seal the loose SPM resource bundle sitting at the app
-# root (it's not a "real" nested bundle) and exits 1 with "unsealed contents
-# present in the bundle root" even though the executable is still signed and
-# the app runs fine unnotarized/local-only. That warning is expected here;
-# don't let it abort the script.
-codesign --force --deep --sign - "$APP" || true
+codesign --force --deep --sign - "$APP"
 echo "Built $APP"
