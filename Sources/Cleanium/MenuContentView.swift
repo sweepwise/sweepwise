@@ -4,7 +4,6 @@ import CleaniumCore
 struct MenuContentView: View {
     @EnvironmentObject var state: AppState
     @State private var confirmDelete = false
-    @State private var permanentBig = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {

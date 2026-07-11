@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import Combine
 import CleaniumCore
 
 /// Thread-safe cancellation flag. `startScan()` creates one per scan and reads it
@@ -31,8 +32,16 @@ final class AppState: ObservableObject {
     /// LLM classifications made this session, keyed by path — used to nominate
     /// learned rules when the user deletes those items.
     private var llmClassified: [String: LLMExplanation] = [:]
+    private var cancellables: Set<AnyCancellable> = []
 
     static let riskOrder: [Risk] = [.safe, .rebuildable, .redownload, .userData, .unknown]
+
+    init() {
+        // SettingsStore is a nested ObservableObject; forward its changes so views
+        // observing AppState via @EnvironmentObject re-render on settings mutations.
+        settings.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+    }
 
     var groupedCandidates: [(Risk, [Candidate])] {
         Self.riskOrder.compactMap { risk in
@@ -107,11 +116,12 @@ final class AppState: ObservableObject {
             let all = (result.candidates + extra)
                 .filter { enabledCategories.contains($0.classification.category) }
             let skippedPaths = result.skipped
+            let finalMap = llmMap
             await MainActor.run { [weak self] in
                 guard let self else { return }
                 self.candidates = all
                 self.skipped = skippedPaths
-                self.llmClassified = llmMap
+                self.llmClassified = finalMap
                 self.progressText = "\(all.count) candidates"
                 self.isScanning = false
             }
