@@ -19,7 +19,9 @@ public final class LearnedRuleStore {
     public func load() -> [LearnedRule] {
         guard let data = try? Data(contentsOf: fileURL) else { return [] }
         do {
-            return try JSONDecoder().decode([LearnedRule].self, from: data)
+            let rules = try JSONDecoder().decode([LearnedRule].self, from: data)
+            lastLoadError = nil  // recovered: clear any stale corrupt-file banner
+            return rules
         } catch {
             // Corrupt file: move aside so the app keeps working; surface in Settings.
             let aside = fileURL.appendingPathExtension("corrupt")

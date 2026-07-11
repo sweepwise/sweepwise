@@ -3,9 +3,18 @@ import XCTest
 
 final class SettingsStoreTests: XCTestCase {
     var defaults: UserDefaults!
+    var suiteName: String!
 
     override func setUp() {
-        defaults = UserDefaults(suiteName: "cleanium-tests-\(UUID().uuidString)")
+        suiteName = "cleanium-tests-\(UUID().uuidString)"
+        defaults = UserDefaults(suiteName: suiteName)
+    }
+
+    override func tearDown() {
+        // Don't leave persisted test suites behind on the machine.
+        defaults.removePersistentDomain(forName: suiteName)
+        defaults = nil
+        suiteName = nil
     }
 
     func testDefaults() {

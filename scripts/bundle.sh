@@ -13,7 +13,6 @@ cp .build/release/Cleanium "$APP/Contents/MacOS/Cleanium"
 # RuleEngine.loadBundledRules() looks up rules.json via Bundle.main first, which
 # resolves the standard Contents/Resources location for a packaged .app — so we
 # ship the plain resource there instead of relying on SwiftPM's Bundle.module bundle.
-mkdir -p "$APP/Contents/Resources"
 cp Sources/CleaniumCore/Resources/rules.json "$APP/Contents/Resources/rules.json"
 
 cat > "$APP/Contents/Info.plist" <<'PLIST'
