@@ -115,33 +115,57 @@ struct MenuContentView: View {
         }
     }
 
+    // Confirmation is rendered inline: presenting a dialog/alert from a MenuBarExtra
+    // window shifts key focus, which auto-dismisses the transient popover and the
+    // dialog along with it.
     private var footer: some View {
-        HStack {
-            Text("\(state.selection.count) selected — \(Fmt.bytes(state.selectedBytes))")
-                .font(.callout)
-            Spacer()
-            Button(state.isDeleting ? "Deleting…" : "Move to Trash") { confirmDelete = true }
-                .disabled(state.selection.isEmpty || state.isDeleting)
-                .keyboardShortcut(.delete)
-        }
-        .confirmationDialog(
-            "Move \(state.selection.count) items (\(Fmt.bytes(state.selectedBytes))) to Trash?",
-            isPresented: $confirmDelete, titleVisibility: .visible
-        ) {
-            Button("Move to Trash", role: .destructive) {
-                state.deleteSelected(permanentOverTwoGB: false)
+        VStack(alignment: .leading, spacing: 6) {
+            if confirmDelete && !state.selection.isEmpty {
+                confirmStrip
             }
-            if state.candidates.contains(where: {
-                state.selection.contains($0.id) && $0.sizeBytes > 2_000_000_000 }) {
-                Button("Trash small + permanently delete items over 2 GB",
-                       role: .destructive) {
-                    state.deleteSelected(permanentOverTwoGB: true)
+            HStack {
+                Text("\(state.selection.count) selected — \(Fmt.bytes(state.selectedBytes))")
+                    .font(.callout)
+                Spacer()
+                Button(state.isDeleting ? "Deleting…" : "Move to Trash") { confirmDelete = true }
+                    .disabled(state.selection.isEmpty || state.isDeleting)
+                    .keyboardShortcut(.delete)
+            }
+        }
+    }
+
+    private var confirmStrip: some View {
+        let hasBig = state.candidates.contains {
+            state.selection.contains($0.id) && $0.sizeBytes > 2_000_000_000
+        }
+        return VStack(alignment: .leading, spacing: 4) {
+            Text("Move \(state.selection.count) items (\(Fmt.bytes(state.selectedBytes))) to Trash?")
+                .font(.callout).bold()
+            if hasBig {
+                Text("Items over 2 GB can fill the Trash; permanent delete frees space "
+                     + "immediately but cannot be undone.")
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
+            HStack {
+                Button("Cancel") { confirmDelete = false }
+                    .keyboardShortcut(.cancelAction)
+                Spacer()
+                if hasBig {
+                    Button("Trash small + delete >2 GB", role: .destructive) {
+                        confirmDelete = false
+                        state.deleteSelected(permanentOverTwoGB: true)
+                    }
                 }
+                Button("Move to Trash", role: .destructive) {
+                    confirmDelete = false
+                    state.deleteSelected(permanentOverTwoGB: false)
+                }
+                .keyboardShortcut(.defaultAction)
             }
-        } message: {
-            Text("Items over 2 GB can fill the Trash; permanent delete frees space "
-                 + "immediately but cannot be undone.")
         }
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
     }
 }
 
