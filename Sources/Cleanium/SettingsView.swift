@@ -53,6 +53,8 @@ struct SettingsView: View {
                             if on { state.settings.enabledCategories.insert(cat) }
                             else { state.settings.enabledCategories.remove(cat) }
                         }))
+                    .toggleStyle(.switch)
+                    .tint(.green)
                 }
             }
         }.formStyle(.grouped)
@@ -96,29 +98,37 @@ struct SettingsView: View {
 
     private var aiTab: some View {
         Form {
-            let detected = LLMProvider.detectInstalled()
+            let detected = Dictionary(uniqueKeysWithValues: LLMProvider.detectInstalled())
             Toggle("Explain unknown folders with AI",
                    isOn: Binding(get: { state.settings.llmEnabled },
                                  set: { state.settings.llmEnabled = $0 }))
+                .toggleStyle(.switch)
+                .tint(.green)
                 .disabled(detected.isEmpty)
             if detected.isEmpty {
                 Text("No supported CLI found. Install claude, codex, or gemini.")
                     .font(.caption).foregroundStyle(.secondary)
-            } else {
-                Picker("Provider", selection: Binding(get: { state.settings.llmProvider },
-                                                       set: { state.settings.llmProvider = $0 })) {
-                    ForEach(detected, id: \.0) { provider, path in
-                        Text("\(provider.displayName) — \(path)").tag(provider)
-                    }
-                }
-                Stepper("Ask about folders over: \(state.settings.llmMinSizeMB) MB",
-                        value: Binding(get: { state.settings.llmMinSizeMB },
-                                       set: { state.settings.llmMinSizeMB = $0 }),
-                        in: 100...5000, step: 100)
-                Text("Uses your existing subscription via the local CLI. "
-                     + "No API keys, no data sent by Cleanium itself.")
-                    .font(.caption).foregroundStyle(.secondary)
             }
+            Picker("Provider", selection: Binding(get: { state.settings.llmProvider },
+                                                   set: { state.settings.llmProvider = $0 })) {
+                ForEach(LLMProvider.allCases, id: \.self) { provider in
+                    Text(provider.displayName
+                         + (detected[provider].map { " — \($0)" } ?? " — not installed"))
+                        .tag(provider)
+                }
+            }
+            if state.settings.llmEnabled && detected[state.settings.llmProvider] == nil {
+                Text("The \(state.settings.llmProvider.rawValue) CLI was not found — "
+                     + "AI explanations will be skipped. Install it or pick another provider.")
+                    .font(.caption).foregroundStyle(.orange)
+            }
+            Stepper("Ask about folders over: \(state.settings.llmMinSizeMB) MB",
+                    value: Binding(get: { state.settings.llmMinSizeMB },
+                                   set: { state.settings.llmMinSizeMB = $0 }),
+                    in: 100...5000, step: 100)
+            Text("Uses your existing subscription via the local CLI. "
+                 + "No API keys, no data sent by Cleanium itself.")
+                .font(.caption).foregroundStyle(.secondary)
         }.formStyle(.grouped)
     }
 }

@@ -12,7 +12,7 @@ struct MenuContentView: View {
             if state.candidates.isEmpty && !state.isScanning {
                 Text("No results yet. Run a scan.")
                     .foregroundStyle(.secondary).padding(.vertical, 20)
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 resultsList
             }
@@ -21,7 +21,7 @@ struct MenuContentView: View {
             footer
         }
         .padding(12)
-        .frame(width: 460, height: 560)
+        .frame(width: 460, height: 560, alignment: .top)
         .sheet(isPresented: $state.showConsentSheet) {
             ConsentSheetView().environmentObject(state)
         }
