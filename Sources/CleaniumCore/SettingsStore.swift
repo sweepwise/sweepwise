@@ -10,7 +10,6 @@ public final class SettingsStore: ObservableObject {
             home + "/Library/Developer",
             home + "/Documents/Dev",
             home + "/Downloads",
-            home + "/.Trash",
             home + "/.cache",
         ]
     }

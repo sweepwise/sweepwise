@@ -58,6 +58,36 @@ final class RuleEngineTests: XCTestCase {
         XCTAssertEqual(c?.provenance, .learned(ruleID: "l1"))
     }
 
+    // Fix 1: first-match-wins means a specific rule must precede its broad umbrella,
+    // else the umbrella shadows it. These lock the ordering that makes it correct.
+    func testSpecificCacheRuleBeatsBroadUmbrella() throws {
+        let rules = try RuleEngine.loadBundledRules()
+        let engine = makeEngine(rules)
+        let playwright = NSHomeDirectory() + "/Library/Caches/ms-playwright-chromium-1234"
+        XCTAssertEqual(engine.classify(path: playwright, modifiedAt: fresh, now: fresh)?.provenance,
+                       .bundled(ruleID: "ms-playwright"),
+                       "ms-playwright must win over user-caches umbrella")
+        let hf = NSHomeDirectory() + "/.cache/huggingface"
+        XCTAssertEqual(engine.classify(path: hf, modifiedAt: fresh, now: fresh)?.provenance,
+                       .bundled(ruleID: "huggingface-cache"),
+                       "huggingface-cache must win over generic-dot-cache umbrella")
+    }
+
+    // Fix 4: settings.stalenessDays overrides a download rule's own stalenessDays.
+    func testDownloadStalenessOverride() {
+        let r = Rule(id: "dl", pattern: "~/Downloads/*", category: .download,
+                     risk: .userData, context: "c", restoreNote: "r", stalenessDays: 90)
+        let p = NSHomeDirectory() + "/Downloads/x.zip"
+        let thirtyDaysOld = Date(timeIntervalSinceNow: -30 * 86400)
+        // Override 10 days -> a 30-day-old path now matches (rule's own 90 would not).
+        let withOverride = RuleEngine(bundled: [r], learned: [],
+                                      downloadStalenessOverrideDays: 10)
+        XCTAssertNotNil(withOverride.classify(path: p, modifiedAt: thirtyDaysOld, now: fresh))
+        // No override -> falls back to the rule's 90 days, so 30-day-old does not match.
+        let noOverride = RuleEngine(bundled: [r], learned: [])
+        XCTAssertNil(noOverride.classify(path: p, modifiedAt: thirtyDaysOld, now: fresh))
+    }
+
     func testBundledRulesLoadAndAreWellFormed() throws {
         let rules = try RuleEngine.loadBundledRules()
         XCTAssertGreaterThanOrEqual(rules.count, 25)
