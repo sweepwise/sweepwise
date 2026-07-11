@@ -44,6 +44,9 @@ struct MenuContentView: View {
                 Button(state.isScanning ? "Scanning…" : "Scan") { state.startScan() }
                     .disabled(state.isScanning)
                 if state.isScanning {
+                    Button(state.isPaused ? "Resume" : "Pause") {
+                        state.isPaused ? state.resumeScan() : state.pauseScan()
+                    }
                     Button("Cancel") { state.cancelScan() }
                 }
                 Spacer()

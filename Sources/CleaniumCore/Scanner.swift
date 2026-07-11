@@ -30,10 +30,13 @@ public final class Scanner {
 
     public func scan(roots: [String],
                      progress: ((ScanProgress) -> Void)? = nil,
+                     onCandidate: ((Candidate) -> Void)? = nil,
+                     isPaused: (() -> Bool)? = nil,
                      isCancelled: () -> Bool = { false }) -> ScanResult {
         var result = ScanResult()
         let fm = FileManager.default
         for root in roots {
+            waitWhilePaused(isPaused, isCancelled: isCancelled)
             guard !isCancelled() else { break }
             var isDir: ObjCBool = false
             guard fm.fileExists(atPath: root, isDirectory: &isDir), isDir.boolValue else {
@@ -43,10 +46,12 @@ public final class Scanner {
             // Track which depth-1 children produced candidates, for unknown-dir detection.
             let children = (try? fm.contentsOfDirectory(atPath: root)) ?? []
             for child in children.sorted() {
+                waitWhilePaused(isPaused, isCancelled: isCancelled)
                 guard !isCancelled() else { break }
                 let childPath = (root as NSString).appendingPathComponent(child)
                 let before = result.candidates.count
-                walk(childPath, into: &result, progress: progress, isCancelled: isCancelled)
+                walk(childPath, into: &result, progress: progress,
+                     onCandidate: onCandidate, isPaused: isPaused, isCancelled: isCancelled)
                 let produced = result.candidates.count > before
                 if !produced, isDirectory(childPath) {
                     let size = Self.directorySize(childPath)
@@ -61,17 +66,30 @@ public final class Scanner {
         return result
     }
 
+    /// Blocks the (background) scan thread while paused; cancellation breaks the wait.
+    private func waitWhilePaused(_ isPaused: (() -> Bool)?, isCancelled: () -> Bool) {
+        guard let isPaused else { return }
+        while isPaused() && !isCancelled() {
+            Thread.sleep(forTimeInterval: 0.05)
+        }
+    }
+
     private func walk(_ path: String, into result: inout ScanResult,
-                      progress: ((ScanProgress) -> Void)?, isCancelled: () -> Bool) {
+                      progress: ((ScanProgress) -> Void)?,
+                      onCandidate: ((Candidate) -> Void)?,
+                      isPaused: (() -> Bool)?, isCancelled: () -> Bool) {
+        waitWhilePaused(isPaused, isCancelled: isCancelled)
         guard !isCancelled() else { return }
         progress?(ScanProgress(currentPath: path, candidatesFound: result.candidates.count))
         let modified = modificationDate(path)
         if let classification = engine.classify(path: path, modifiedAt: modified) {
             let size = isDirectory(path) ? Self.directorySize(path) : fileSize(path)
             if size >= minSizeBytes {
-                result.candidates.append(Candidate(path: path, sizeBytes: size,
-                                                   modifiedAt: modified,
-                                                   classification: classification))
+                let candidate = Candidate(path: path, sizeBytes: size,
+                                          modifiedAt: modified,
+                                          classification: classification)
+                result.candidates.append(candidate)
+                onCandidate?(candidate)
             }
             return  // matched: do not descend
         }
@@ -82,7 +100,8 @@ public final class Scanner {
         }
         for child in children.sorted() {
             walk((path as NSString).appendingPathComponent(child), into: &result,
-                 progress: progress, isCancelled: isCancelled)
+                 progress: progress, onCandidate: onCandidate,
+                 isPaused: isPaused, isCancelled: isCancelled)
         }
     }
 

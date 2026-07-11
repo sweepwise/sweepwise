@@ -3,13 +3,14 @@ import SwiftUI
 import Combine
 import CleaniumCore
 
-/// Thread-safe cancellation flag. `startScan()` creates one per scan and reads it
-/// from a detached background task; `MainActor.assumeIsolated` would trap if called
-/// off the main actor, so this uses a lock instead of actor isolation.
-final class CancelFlag: @unchecked Sendable {
+/// Thread-safe flag shared between the MainActor and the detached scan task
+/// (used for both cancellation and pause). `MainActor.assumeIsolated` would trap
+/// if called off the main actor, so this uses a lock instead of actor isolation.
+final class AtomicFlag: @unchecked Sendable {
     private let lock = NSLock()
     private var value = false
     func set() { lock.lock(); value = true; lock.unlock() }
+    func clear() { lock.lock(); value = false; lock.unlock() }
     var isSet: Bool { lock.lock(); defer { lock.unlock() }; return value }
 }
 
@@ -41,6 +42,7 @@ final class AppState: ObservableObject {
     @Published var skipped: [String] = []
     @Published var selection: Set<String> = []
     @Published var isScanning = false
+    @Published var isPaused = false
     @Published var isDeleting = false
     @Published var progressText = ""
     @Published var outcomes: [DeletionOutcome] = []
@@ -51,7 +53,8 @@ final class AppState: ObservableObject {
     let settings = SettingsStore()
     let learnedStore = LearnedRuleStore()
 
-    private var cancelFlag = CancelFlag()
+    private var cancelFlag = AtomicFlag()
+    private var pauseFlag = AtomicFlag()
     /// LLM classifications made this session, keyed by path — used to nominate
     /// learned rules when the user deletes those items.
     private var llmClassified: [String: LLMExplanation] = [:]
@@ -82,8 +85,11 @@ final class AppState: ObservableObject {
     func startScan() {
         guard !isScanning else { return }
         isScanning = true
-        let flag = CancelFlag()
+        isPaused = false
+        let flag = AtomicFlag()
         cancelFlag = flag
+        let pauseF = AtomicFlag()
+        pauseFlag = pauseF
         candidates = []
         skipped = []
         selection = []
@@ -118,7 +124,18 @@ final class AppState: ObservableObject {
                     self?.progressText =
                         "\(progress.candidatesFound) found — \(progress.currentPath)"
                 }
-            }, isCancelled: isCancelled)
+            }, onCandidate: { candidate in
+                // Stream candidates into the UI as they are found, so the user can
+                // pause the scan and act on what has been identified so far.
+                guard !flag.isSet, enabledCategories.contains(candidate.classification.category)
+                else { return }
+                Task { @MainActor [weak self] in
+                    guard !flag.isSet, let self else { return }
+                    if !self.candidates.contains(where: { $0.path == candidate.path }) {
+                        self.candidates.append(candidate)
+                    }
+                }
+            }, isPaused: { pauseF.isSet }, isCancelled: isCancelled)
 
             var extra: [Candidate] = []
             var llmMap: [String: LLMExplanation] = [:]
@@ -127,6 +144,9 @@ final class AppState: ObservableObject {
                    .first(where: { $0.0 == provider }) {
                 let explainer = LLMExplainer(provider: detected, binaryPath: binary)
                 for dir in result.unknownDirs {
+                    while pauseF.isSet && !flag.isSet {
+                        try? await Task.sleep(nanoseconds: 50_000_000)
+                    }
                     guard !isCancelled() else { break }
                     Task { @MainActor [weak self] in
                         guard !flag.isSet else { return }
@@ -145,8 +165,10 @@ final class AppState: ObservableObject {
                 }
             }
 
-            let all = (result.candidates + extra)
-                .filter { enabledCategories.contains($0.classification.category) }
+            // Rule candidates were already streamed live (and some may have been
+            // deleted mid-scan) — only append the LLM extras here, never reassign
+            // the whole list, or deleted items would reappear.
+            let extras = extra.filter { enabledCategories.contains($0.classification.category) }
             let skippedPaths = result.skipped
             let finalMap = llmMap
             await MainActor.run { [weak self] in
@@ -154,19 +176,37 @@ final class AppState: ObservableObject {
                 // A cancelled scan must not overwrite newer state: a later scan may
                 // already be running with a different flag. Return without applying.
                 guard !flag.isSet else { return }
-                self.candidates = all
+                for candidate in extras where !self.candidates.contains(where: { $0.path == candidate.path }) {
+                    self.candidates.append(candidate)
+                }
                 self.skipped = skippedPaths
                 self.llmClassified = finalMap
-                self.progressText = "\(all.count) candidates"
+                self.progressText = "\(self.candidates.count) candidates"
                 self.isScanning = false
+                self.isPaused = false
             }
         }
     }
 
     func cancelScan() {
         cancelFlag.set()
+        pauseFlag.clear()
         isScanning = false
-        progressText = "Cancelled"
+        isPaused = false
+        // Candidates streamed so far stay in the list — cancelling keeps partial results.
+        progressText = "Cancelled — \(candidates.count) found"
+    }
+
+    func pauseScan() {
+        guard isScanning else { return }
+        pauseFlag.set()
+        isPaused = true
+        progressText = "Paused — \(candidates.count) found so far"
+    }
+
+    func resumeScan() {
+        pauseFlag.clear()
+        isPaused = false
     }
 
     func deleteSelected(permanentOverTwoGB: Bool) {

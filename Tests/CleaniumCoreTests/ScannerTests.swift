@@ -70,4 +70,49 @@ final class ScannerTests: XCTestCase {
                                         progress: nil, isCancelled: { false })
         XCTAssertEqual(result.skipped, ["/nonexistent-cleanium-root"])
     }
+
+    func testCandidatesStreamedViaCallback() {
+        var streamed: [String] = []
+        let result = makeScanner().scan(roots: [root.path],
+                                        onCandidate: { streamed.append($0.path) },
+                                        isCancelled: { false })
+        XCTAssertEqual(streamed, result.candidates.map(\.path))
+        XCTAssertEqual(streamed.count, 1)
+    }
+
+    func testPauseBlocksScanUntilResumed() {
+        let lock = NSLock()
+        var paused = true
+        var finished = false
+        let done = expectation(description: "scan finished after resume")
+        DispatchQueue.global().async {
+            _ = self.makeScanner().scan(
+                roots: [self.root.path],
+                isPaused: { lock.lock(); defer { lock.unlock() }; return paused },
+                isCancelled: { false })
+            lock.lock(); finished = true; lock.unlock()
+            done.fulfill()
+        }
+        Thread.sleep(forTimeInterval: 0.3)
+        lock.lock(); let blockedWhilePaused = !finished; lock.unlock()
+        XCTAssertTrue(blockedWhilePaused, "scan should block while paused")
+        lock.lock(); paused = false; lock.unlock()
+        wait(for: [done], timeout: 5)
+    }
+
+    func testCancelWhilePausedStopsScan() {
+        let lock = NSLock()
+        var cancelled = false
+        let done = expectation(description: "scan exits when cancelled during pause")
+        DispatchQueue.global().async {
+            _ = self.makeScanner().scan(
+                roots: [self.root.path],
+                isPaused: { true },
+                isCancelled: { lock.lock(); defer { lock.unlock() }; return cancelled })
+            done.fulfill()
+        }
+        Thread.sleep(forTimeInterval: 0.2)
+        lock.lock(); cancelled = true; lock.unlock()
+        wait(for: [done], timeout: 5)
+    }
 }
