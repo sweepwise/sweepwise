@@ -13,12 +13,35 @@ final class CancelFlag: @unchecked Sendable {
     var isSet: Bool { lock.lock(); defer { lock.unlock() }; return value }
 }
 
+/// Lock-guarded throttle for scan progress. The Scanner fires its progress
+/// callback per visited path (10⁵+ times) off the main actor; forwarding each
+/// one would flood the MainActor. This decides whether a given progress event is
+/// worth forwarding: yes when the candidate count changed, or ≥100ms elapsed.
+final class ProgressThrottle: @unchecked Sendable {
+    private let lock = NSLock()
+    private var lastSent = Date.distantPast
+    private var lastCount = -1
+    private let minInterval: TimeInterval = 0.1
+
+    func shouldForward(candidatesFound: Int) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        let now = Date()
+        if candidatesFound != lastCount || now.timeIntervalSince(lastSent) >= minInterval {
+            lastSent = now
+            lastCount = candidatesFound
+            return true
+        }
+        return false
+    }
+}
+
 @MainActor
 final class AppState: ObservableObject {
     @Published var candidates: [Candidate] = []
     @Published var skipped: [String] = []
     @Published var selection: Set<String> = []
     @Published var isScanning = false
+    @Published var isDeleting = false
     @Published var progressText = ""
     @Published var outcomes: [DeletionOutcome] = []
     @Published var pendingLearnable: [LearnedRule] = []
@@ -70,7 +93,8 @@ final class AppState: ObservableObject {
         let learned = learnedStore.load()
         learnedLoadError = learnedStore.lastLoadError
         let bundled = (try? RuleEngine.loadBundledRules()) ?? []
-        let engine = RuleEngine(bundled: bundled, learned: learned)
+        let engine = RuleEngine(bundled: bundled, learned: learned,
+                                downloadStalenessOverrideDays: settings.stalenessDays)
         let scanner = CleaniumCore.Scanner(
             engine: engine,
             minSizeBytes: Int64(settings.minSizeMB) * 1_000_000,
@@ -80,10 +104,17 @@ final class AppState: ObservableObject {
         let llmEnabled = settings.llmEnabled
         let provider = settings.llmProvider
         let isCancelled: () -> Bool = { flag.isSet }
+        let throttle = ProgressThrottle()
 
         Task.detached(priority: .userInitiated) { [weak self] in
             let result = scanner.scan(roots: roots, progress: { progress in
+                // Throttle: the callback fires per visited path off-main. Drop events
+                // unless the candidate count changed or ≥100ms elapsed, and never
+                // clobber the final text once this scan was cancelled.
+                guard !flag.isSet, throttle.shouldForward(candidatesFound: progress.candidatesFound)
+                else { return }
                 Task { @MainActor [weak self] in
+                    guard !flag.isSet else { return }
                     self?.progressText =
                         "\(progress.candidatesFound) found — \(progress.currentPath)"
                 }
@@ -98,6 +129,7 @@ final class AppState: ObservableObject {
                 for dir in result.unknownDirs {
                     guard !isCancelled() else { break }
                     Task { @MainActor [weak self] in
+                        guard !flag.isSet else { return }
                         self?.progressText = "Asking \(detected.rawValue) about \(dir.path)"
                     }
                     guard let e = explainer.explain(path: dir.path, sizeBytes: dir.sizeBytes)
@@ -119,6 +151,9 @@ final class AppState: ObservableObject {
             let finalMap = llmMap
             await MainActor.run { [weak self] in
                 guard let self else { return }
+                // A cancelled scan must not overwrite newer state: a later scan may
+                // already be running with a different flag. Return without applying.
+                guard !flag.isSet else { return }
                 self.candidates = all
                 self.skipped = skippedPaths
                 self.llmClassified = finalMap
@@ -135,34 +170,52 @@ final class AppState: ObservableObject {
     }
 
     func deleteSelected(permanentOverTwoGB: Bool) {
+        guard !isDeleting else { return }
+        isDeleting = true
         let items = candidates.filter { selection.contains($0.id) }
-        let service = TrashService()
         let twoGB: Int64 = 2_000_000_000
-        let (bigItems, normalItems) = (items.filter { $0.sizeBytes > twoGB },
-                                       items.filter { $0.sizeBytes <= twoGB })
-        var results = service.trash(paths: normalItems.map(\.path))
-        results += permanentOverTwoGB
-            ? service.permanentlyDelete(paths: bigItems.map(\.path))
-            : service.trash(paths: bigItems.map(\.path))
-        outcomes = results
+        let bigPaths = items.filter { $0.sizeBytes > twoGB }.map(\.path)
+        let normalPaths = items.filter { $0.sizeBytes <= twoGB }.map(\.path)
+        let provider = settings.llmProvider.rawValue
+        let classified = llmClassified
 
-        let deletedPaths = Set(results.filter(\.success).map(\.path))
-        candidates.removeAll { deletedPaths.contains($0.path) }
-        selection.subtract(deletedPaths)
+        // TrashService can walk huge trees; run it off the main actor so the menu
+        // stays responsive, then apply results back on the main actor.
+        Task.detached(priority: .userInitiated) { [weak self] in
+            let service = TrashService()
+            var results = service.trash(paths: normalPaths)
+            results += permanentOverTwoGB
+                ? service.permanentlyDelete(paths: bigPaths)
+                : service.trash(paths: bigPaths)
+            let finalResults = results
 
-        // Nominate learned rules for deleted LLM-classified items; consent sheet decides.
-        pendingLearnable = deletedPaths.compactMap { path in
-            guard let e = llmClassified[path], let suggested = e.suggestedRule else { return nil }
-            let id = UUID().uuidString
-            let exact = suggested.kind == .exactPath
-            return LearnedRule(
-                id: id,
-                rule: Rule(id: id, pattern: suggested.pattern, category: e.category,
-                           risk: e.risk, context: e.context, restoreNote: e.restoreNote),
-                kind: suggested.kind, sourceProvider: settings.llmProvider.rawValue,
-                learnedAt: Date(), originPath: path, verified: exact)
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.outcomes = finalResults
+
+                let deletedPaths = Set(finalResults.filter(\.success).map(\.path))
+                self.candidates.removeAll { deletedPaths.contains($0.path) }
+                self.selection.subtract(deletedPaths)
+
+                // Nominate learned rules for deleted LLM-classified items; the consent
+                // sheet decides. Only nominate suggestions that actually relate to the
+                // deleted path (Fix 7 — never trust a bare `*` or `~/Library/*`).
+                self.pendingLearnable = deletedPaths.compactMap { path in
+                    guard let e = classified[path], let suggested = e.suggestedRule,
+                          suggested.isValid(forOriginPath: path) else { return nil }
+                    let id = UUID().uuidString
+                    let exact = suggested.kind == .exactPath
+                    return LearnedRule(
+                        id: id,
+                        rule: Rule(id: id, pattern: suggested.pattern, category: e.category,
+                                   risk: e.risk, context: e.context, restoreNote: e.restoreNote),
+                        kind: suggested.kind, sourceProvider: provider,
+                        learnedAt: Date(), originPath: path, verified: exact)
+                }
+                self.showConsentSheet = !self.pendingLearnable.isEmpty
+                self.isDeleting = false
+            }
         }
-        showConsentSheet = !pendingLearnable.isEmpty
     }
 
     func saveLearned(_ approved: [LearnedRule]) {

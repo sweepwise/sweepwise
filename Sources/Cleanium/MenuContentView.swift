@@ -16,6 +16,7 @@ struct MenuContentView: View {
             } else {
                 resultsList
             }
+            failureBanner
             Divider()
             footer
         }
@@ -84,13 +85,38 @@ struct MenuContentView: View {
         .listStyle(.inset)
     }
 
+    /// Surfaces per-item trash failures after a deletion (Fix 3). Cleared when the
+    /// next scan resets `outcomes`, or a delete that fully succeeds.
+    @ViewBuilder private var failureBanner: some View {
+        let failures = state.outcomes.filter { !$0.success }
+        if !failures.isEmpty {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(failures.count) item\(failures.count == 1 ? "" : "s") could not be moved to Trash")
+                    .font(.caption).bold().foregroundStyle(.red)
+                ForEach(failures.prefix(3), id: \.path) { outcome in
+                    Text("• \((outcome.path as NSString).lastPathComponent): "
+                         + (outcome.error ?? "unknown error"))
+                        .font(.caption2).foregroundStyle(.red)
+                        .lineLimit(1).truncationMode(.middle)
+                }
+                if failures.count > 3 {
+                    Text("…and \(failures.count - 3) more")
+                        .font(.caption2).foregroundStyle(.red)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(6)
+            .background(.red.opacity(0.1), in: RoundedRectangle(cornerRadius: 6))
+        }
+    }
+
     private var footer: some View {
         HStack {
             Text("\(state.selection.count) selected — \(Fmt.bytes(state.selectedBytes))")
                 .font(.callout)
             Spacer()
-            Button("Move to Trash") { confirmDelete = true }
-                .disabled(state.selection.isEmpty)
+            Button(state.isDeleting ? "Deleting…" : "Move to Trash") { confirmDelete = true }
+                .disabled(state.selection.isEmpty || state.isDeleting)
                 .keyboardShortcut(.delete)
         }
         .confirmationDialog(
