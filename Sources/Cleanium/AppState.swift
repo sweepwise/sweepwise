@@ -49,6 +49,10 @@ final class AppState: ObservableObject {
     @Published var pendingLearnable: [LearnedRule] = []
     @Published var showConsentSheet = false
     @Published var learnedLoadError: String?
+    /// Built-in ruleset failed to load — scans would silently find almost nothing.
+    @Published var ruleLoadError: String?
+    /// A learned-rule save/delete the user asked for failed to persist.
+    @Published var storeError: String?
 
     let settings = SettingsStore()
     let learnedStore = LearnedRuleStore()
@@ -98,7 +102,16 @@ final class AppState: ObservableObject {
 
         let learned = learnedStore.load()
         learnedLoadError = learnedStore.lastLoadError
-        let bundled = (try? RuleEngine.loadBundledRules()) ?? []
+        let bundled: [Rule]
+        do {
+            bundled = try RuleEngine.loadBundledRules()
+            ruleLoadError = bundled.isEmpty
+                ? "Built-in rules file is empty — scans will find almost nothing. Try reinstalling Cleanium."
+                : nil
+        } catch {
+            bundled = []
+            ruleLoadError = "Could not load built-in rules — scans will find almost nothing. Try reinstalling Cleanium."
+        }
         let engine = RuleEngine(bundled: bundled, learned: learned,
                                 downloadStalenessOverrideDays: settings.stalenessDays)
         let scanner = CleaniumCore.Scanner(
@@ -259,9 +272,13 @@ final class AppState: ObservableObject {
     }
 
     func saveLearned(_ approved: [LearnedRule]) {
+        var failed = 0
         for rule in approved {
-            try? learnedStore.add(rule)
+            do { try learnedStore.add(rule) } catch { failed += 1 }
         }
+        storeError = failed > 0
+            ? "Could not save \(failed) approved rule\(failed == 1 ? "" : "s") — disk write failed."
+            : nil
         pendingLearnable = []
         showConsentSheet = false
     }

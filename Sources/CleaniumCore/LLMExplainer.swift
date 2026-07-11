@@ -11,10 +11,15 @@ public enum LLMProvider: String, Codable, CaseIterable, Sendable {
         }
     }
 
+    /// Folder names are untrusted input embedded in the prompt, and these CLIs are
+    /// agentic — invoke each with tool use locked down so injected text in a path
+    /// cannot trigger actions. Gemini's non-interactive default already requires
+    /// approval for tool actions, which cannot be granted in -p mode.
     public func arguments(prompt: String) -> [String] {
         switch self {
-        case .claude: return ["-p", prompt]
-        case .codex: return ["exec", "--skip-git-repo-check", prompt]
+        case .claude: return ["-p", prompt, "--disallowedTools",
+                              "Bash,Edit,Write,NotebookEdit,WebFetch,WebSearch,Task,Read,Glob,Grep"]
+        case .codex: return ["exec", "--sandbox", "read-only", "--skip-git-repo-check", prompt]
         case .gemini: return ["-p", prompt]
         }
     }

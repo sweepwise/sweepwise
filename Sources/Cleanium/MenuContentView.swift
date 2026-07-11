@@ -61,6 +61,12 @@ struct MenuContentView: View {
                 Text(state.progressText).font(.caption2)
                     .foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
             }
+            if let err = state.ruleLoadError {
+                Text(err).font(.caption).foregroundStyle(.red)
+            }
+            if let err = state.storeError {
+                Text(err).font(.caption).foregroundStyle(.red)
+            }
         }
     }
 

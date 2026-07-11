@@ -65,6 +65,9 @@ struct SettingsView: View {
             if let err = state.learnedLoadError {
                 Text(err).foregroundStyle(.red).font(.caption)
             }
+            if let err = state.storeError {
+                Text(err).foregroundStyle(.red).font(.caption)
+            }
             Section("Learned rules") {
                 let learned = state.learnedStore.load()
                 if learned.isEmpty {
@@ -82,7 +85,13 @@ struct SettingsView: View {
                         }
                         Spacer()
                         Button("Delete") {
-                            try? state.learnedStore.remove(id: rule.id)
+                            do {
+                                try state.learnedStore.remove(id: rule.id)
+                                state.storeError = nil
+                            } catch {
+                                state.storeError = "Could not delete the rule — "
+                                    + error.localizedDescription
+                            }
                             state.objectWillChange.send()
                         }.font(.caption)
                     }

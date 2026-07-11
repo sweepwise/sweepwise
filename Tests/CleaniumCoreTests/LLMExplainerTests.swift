@@ -40,10 +40,14 @@ final class LLMExplainerTests: XCTestCase {
         XCTAssertTrue(p.contains("exactPath"))
     }
 
-    func testProviderArguments() {
-        XCTAssertEqual(LLMProvider.claude.arguments(prompt: "hi"), ["-p", "hi"])
+    func testProviderArgumentsRestrictTools() {
+        // Folder names are untrusted input embedded in the prompt; the CLIs are
+        // agentic, so every provider must be invoked with tool use locked down.
+        XCTAssertEqual(LLMProvider.claude.arguments(prompt: "hi"),
+                       ["-p", "hi", "--disallowedTools",
+                        "Bash,Edit,Write,NotebookEdit,WebFetch,WebSearch,Task,Read,Glob,Grep"])
         XCTAssertEqual(LLMProvider.codex.arguments(prompt: "hi"),
-                       ["exec", "--skip-git-repo-check", "hi"])
+                       ["exec", "--sandbox", "read-only", "--skip-git-repo-check", "hi"])
         XCTAssertEqual(LLMProvider.gemini.arguments(prompt: "hi"), ["-p", "hi"])
     }
 
