@@ -42,7 +42,7 @@ struct MenuContentView: View {
             }
             HStack {
                 Button(state.isScanning ? "Scanning…" : "Scan") { state.startScan() }
-                    .disabled(state.isScanning)
+                    .disabled(state.isScanning || state.isDeleting)
                 if state.isScanning {
                     Button(state.isPaused ? "Resume" : "Pause") {
                         state.isPaused ? state.resumeScan() : state.pauseScan()

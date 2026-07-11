@@ -40,6 +40,34 @@ final class LLMExplainerTests: XCTestCase {
         XCTAssertTrue(p.contains("exactPath"))
     }
 
+    func testTimeoutKillsProcessThatIgnoresSIGTERM() throws {
+        // A CLI that traps SIGTERM must still die (SIGKILL escalation) so a
+        // stuck provider can't outlive its explain() call.
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("cleanium-kill-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let script = dir.appendingPathComponent("stubborn")
+        let pidFile = dir.appendingPathComponent("pid")
+        try "#!/bin/sh\ntrap '' TERM\necho $$ > \"\(pidFile.path)\"\nsleep 60\n"
+            .write(to: script, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: script.path)
+
+        let explainer = LLMExplainer(provider: .claude, binaryPath: script.path, timeout: 1)
+        XCTAssertNil(explainer.explain(path: "/x", sizeBytes: 1))
+
+        let pidString = try String(contentsOf: pidFile, encoding: .utf8)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let pid = try XCTUnwrap(Int32(pidString))
+        // The child trapped SIGTERM; SIGKILL escalation must still end it soon.
+        var dead = false
+        for _ in 0..<50 where !dead {
+            dead = kill(pid, 0) != 0
+            if !dead { Thread.sleep(forTimeInterval: 0.1) }
+        }
+        XCTAssertTrue(dead, "stubborn child (pid \(pid)) survived the timeout kill path")
+    }
+
     func testProviderArgumentsRestrictTools() {
         // Folder names are untrusted input embedded in the prompt; the CLIs are
         // agentic, so every provider must be invoked with tool use locked down.

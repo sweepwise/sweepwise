@@ -117,7 +117,16 @@ public final class LLMExplainer {
             Thread.sleep(forTimeInterval: 0.1)
         }
         if process.isRunning {
+            // SIGTERM first; a CLI that traps it gets SIGKILL after a short grace
+            // period so a stuck provider can't outlive this call.
             process.terminate()
+            let grace = Date(timeIntervalSinceNow: 2)
+            while process.isRunning && Date() < grace {
+                Thread.sleep(forTimeInterval: 0.1)
+            }
+            if process.isRunning {
+                kill(process.processIdentifier, SIGKILL)
+            }
             return nil
         }
         guard process.terminationStatus == 0 else { return nil }

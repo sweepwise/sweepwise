@@ -48,6 +48,30 @@ final class RuleEngineTests: XCTestCase {
         XCTAssertEqual(c?.provenance, .bundled(ruleID: "b"))
     }
 
+    func testPathGlobDoesNotCrossDirectories() {
+        // `*` must not match across `/` — `~/Library/Caches/*` means direct
+        // children, not arbitrarily deep paths.
+        let home = NSHomeDirectory()
+        let r = Rule(id: "lc", pattern: "~/Library/Caches/*", category: .cache,
+                     risk: .safe, context: "c", restoreNote: "r")
+        let engine = makeEngine([r])
+        XCTAssertNil(engine.classify(path: home + "/Library/Caches/app/nested/file",
+                                     modifiedAt: fresh, now: fresh))
+    }
+
+    func testExactPathLearnedRuleMatchesMetacharacterPaths() {
+        // Real directories can contain glob metacharacters ("Adobe [2024]");
+        // exactPath learned rules must match by string equality, not fnmatch.
+        let path = "/private/x/Adobe [2024]"
+        let lr = LearnedRule(id: "lx", rule: Rule(id: "lx", pattern: path,
+                     category: .appLeftover, risk: .userData, context: "c", restoreNote: "r"),
+                     kind: .exactPath, sourceProvider: "claude", learnedAt: Date(),
+                     originPath: path, verified: true)
+        let c = makeEngine([], learned: [lr])
+            .classify(path: path, modifiedAt: fresh, now: fresh)
+        XCTAssertEqual(c?.provenance, .learned(ruleID: "lx"))
+    }
+
     func testLearnedRuleMatches() {
         let lr = LearnedRule(id: "l1", rule: Rule(id: "l1", pattern: "/private/x/voice",
                      category: .appLeftover, risk: .userData, context: "c", restoreNote: "r"),

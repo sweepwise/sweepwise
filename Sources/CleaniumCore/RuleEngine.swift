@@ -1,12 +1,13 @@
 import Foundation
 
 public enum Glob {
-    /// Patterns containing "/" match the full path (after ~ expansion).
-    /// Bare patterns match the last path component.
+    /// Patterns containing "/" match the full path (after ~ expansion), with
+    /// FNM_PATHNAME so `*` never crosses a `/` — `~/Library/Caches/*` means
+    /// direct children only. Bare patterns match the last path component.
     public static func matches(pattern: String, path: String) -> Bool {
         if pattern.contains("/") {
             let expanded = (pattern as NSString).expandingTildeInPath
-            return fnmatch(expanded, path, 0) == 0
+            return fnmatch(expanded, path, FNM_PATHNAME) == 0
         }
         let name = (path as NSString).lastPathComponent
         return fnmatch(pattern, name, 0) == 0
@@ -46,7 +47,7 @@ public struct RuleEngine {
                                   context: rule.context, restoreNote: rule.restoreNote,
                                   provenance: .bundled(ruleID: rule.id))
         }
-        for lr in learned where ruleApplies(lr.rule, path: path, modifiedAt: modifiedAt, now: now) {
+        for lr in learned where learnedApplies(lr, path: path, modifiedAt: modifiedAt, now: now) {
             return Classification(category: lr.rule.category, risk: lr.rule.risk,
                                   context: lr.rule.context, restoreNote: lr.rule.restoreNote,
                                   provenance: .learned(ruleID: lr.id))
@@ -54,8 +55,23 @@ public struct RuleEngine {
         return nil
     }
 
+    /// exactPath learned rules match by string equality (tilde-expanded), never
+    /// fnmatch — real paths can contain glob metacharacters ("Adobe [2024]").
+    private func learnedApplies(_ lr: LearnedRule, path: String,
+                                modifiedAt: Date, now: Date) -> Bool {
+        if lr.kind == .exactPath {
+            guard (lr.rule.pattern as NSString).expandingTildeInPath == path else { return false }
+            return stalenessSatisfied(lr.rule, modifiedAt: modifiedAt, now: now)
+        }
+        return ruleApplies(lr.rule, path: path, modifiedAt: modifiedAt, now: now)
+    }
+
     private func ruleApplies(_ rule: Rule, path: String, modifiedAt: Date, now: Date) -> Bool {
         guard Glob.matches(pattern: rule.pattern, path: path) else { return false }
+        return stalenessSatisfied(rule, modifiedAt: modifiedAt, now: now)
+    }
+
+    private func stalenessSatisfied(_ rule: Rule, modifiedAt: Date, now: Date) -> Bool {
         if let ruleDays = rule.stalenessDays {
             // Only download rules with an explicit stalenessDays honor the user override.
             let days = (rule.category == .download ? downloadStalenessOverrideDays : nil) ?? ruleDays

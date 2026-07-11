@@ -87,7 +87,9 @@ final class AppState: ObservableObject {
     }
 
     func startScan() {
-        guard !isScanning else { return }
+        // Also blocked while a deletion is in flight: its completion rewrites
+        // outcomes/candidates and would race a fresh scan's state.
+        guard !isScanning, !isDeleting else { return }
         isScanning = true
         isPaused = false
         let flag = AtomicFlag()

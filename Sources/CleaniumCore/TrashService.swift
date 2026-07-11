@@ -6,6 +6,10 @@ public struct DeletionOutcome: Equatable, Sendable {
     public var error: String?
 }
 
+/// Paths are captured at scan time and deleted later (TOCTOU window). Accepted
+/// for a local, user-driven app: `trashItem`/`removeItem` act on a symlink itself
+/// rather than traversing it, so a swap at the target path cannot redirect the
+/// deletion to another location.
 public final class TrashService {
     private let fm: FileManager
 
