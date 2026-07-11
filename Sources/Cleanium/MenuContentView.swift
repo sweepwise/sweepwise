@@ -34,6 +34,11 @@ struct MenuContentView: View {
                 Spacer()
                 diskGauge
                 SettingsLink { Image(systemName: "gearshape") }
+                Button { NSApplication.shared.terminate(nil) } label: {
+                    Image(systemName: "power")
+                }
+                .help("Quit Cleanium")
+                .keyboardShortcut("q")
             }
             HStack {
                 Button(state.isScanning ? "Scanning…" : "Scan") { state.startScan() }
