@@ -2,9 +2,16 @@ import SwiftUI
 
 @main
 struct CleaniumApp: App {
+    @StateObject private var state = AppState()
+
     var body: some Scene {
         MenuBarExtra("Cleanium", systemImage: "internaldrive") {
-            Text("Cleanium — UI lands in Task 9")
+            MenuContentView().environmentObject(state)
+        }
+        .menuBarExtraStyle(.window)
+
+        Settings {
+            SettingsView().environmentObject(state)
         }
     }
 }
