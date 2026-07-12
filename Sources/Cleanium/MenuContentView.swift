@@ -18,10 +18,10 @@ struct MenuContentView: View {
             }
         }
         .frame(width: 460, height: 560, alignment: .top)
-        // No explicit background: the hosting NSPopover supplies the translucent
-        // material, and clear SwiftUI content lets it show through. The tuner
-        // thins that material further than the system default.
-        .background(PopoverMaterialTuner.Representable())
+        // Same translucency mechanism as the Settings window: our own effect
+        // view in a cleared borderless panel.
+        .background(VisualEffectBackground().ignoresSafeArea())
+        .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
     }
 
     private var mainContent: some View {
@@ -214,40 +214,6 @@ struct MenuContentView: View {
         .padding(8)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
-    }
-}
-
-/// Dials the hosting NSPopover's frosted frame toward more transparency than
-/// the system default by lowering the frame's own effect-view alpha.
-final class PopoverMaterialTuner: NSView {
-    /// 1.0 = system default frost; lower = more desktop showing through.
-    static let materialAlpha: CGFloat = 0.45
-
-    override func viewDidMoveToWindow() {
-        super.viewDidMoveToWindow()
-        // The popover's material lives in the frame view above contentView;
-        // it may attach a beat after us, hence the async second pass.
-        tuneFrame()
-        DispatchQueue.main.async { [weak self] in self?.tuneFrame() }
-    }
-
-    private func tuneFrame() {
-        guard let frameView = window?.contentView?.superview else { return }
-        thinEffectViews(in: frameView)
-    }
-
-    private func thinEffectViews(in view: NSView) {
-        for sub in view.subviews {
-            if let effect = sub as? NSVisualEffectView, effect !== self {
-                effect.alphaValue = Self.materialAlpha
-            }
-            thinEffectViews(in: sub)
-        }
-    }
-
-    struct Representable: NSViewRepresentable {
-        func makeNSView(context: Context) -> PopoverMaterialTuner { PopoverMaterialTuner() }
-        func updateNSView(_ nsView: PopoverMaterialTuner, context: Context) {}
     }
 }
 
