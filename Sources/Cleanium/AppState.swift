@@ -53,6 +53,11 @@ final class AppState: ObservableObject {
     @Published var ruleLoadError: String?
     /// A learned-rule save/delete the user asked for failed to persist.
     @Published var storeError: String?
+    /// AI usage for the current/most recent scan.
+    @Published var llmCalls = 0
+    @Published var llmTokens = 0
+    /// True when at least one AI call this scan didn't report usage (codex/gemini).
+    @Published var llmTokensIncomplete = false
 
     let settings = SettingsStore()
     let learnedStore = LearnedRuleStore()
@@ -101,6 +106,9 @@ final class AppState: ObservableObject {
         selection = []
         outcomes = []
         llmClassified = [:]
+        llmCalls = 0
+        llmTokens = 0
+        llmTokensIncomplete = false
 
         let learned = learnedStore.load()
         learnedLoadError = learnedStore.lastLoadError
@@ -167,8 +175,19 @@ final class AppState: ObservableObject {
                         guard !flag.isSet else { return }
                         self?.progressText = "Asking \(detected.rawValue) about \(dir.path)"
                     }
-                    guard let e = explainer.explain(path: dir.path, sizeBytes: dir.sizeBytes)
+                    guard let reply = explainer.explain(path: dir.path, sizeBytes: dir.sizeBytes)
                     else { continue }
+                    let e = reply.explanation
+                    let usage = reply.usage
+                    Task { @MainActor [weak self] in
+                        guard !flag.isSet, let self else { return }
+                        self.llmCalls += 1
+                        if let usage {
+                            self.llmTokens += usage.totalTokens
+                        } else {
+                            self.llmTokensIncomplete = true
+                        }
+                    }
                     llmMap[dir.path] = e
                     extra.append(Candidate(
                         path: dir.path, sizeBytes: dir.sizeBytes, modifiedAt: dir.modifiedAt,

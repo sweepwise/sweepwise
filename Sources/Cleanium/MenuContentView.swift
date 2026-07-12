@@ -72,6 +72,12 @@ struct MenuContentView: View {
                 Text(state.progressText).font(.caption2)
                     .foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
             }
+            if state.llmCalls > 0 {
+                Text("AI this scan: \(state.llmCalls) call\(state.llmCalls == 1 ? "" : "s")"
+                     + " · \(state.llmTokens.formatted()) tokens"
+                     + (state.llmTokensIncomplete ? " (some calls did not report usage)" : ""))
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
             if let err = state.ruleLoadError {
                 Text(err).font(.caption).foregroundStyle(.red)
             }

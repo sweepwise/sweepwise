@@ -40,6 +40,31 @@ final class LLMExplainerTests: XCTestCase {
         XCTAssertTrue(p.contains("exactPath"))
     }
 
+    func testExtractClaudeEnvelopeWithUsage() throws {
+        let inner = goodJSON.replacingOccurrences(of: "\"", with: "\\\"")
+            .replacingOccurrences(of: "\n", with: " ")
+        let envelope = """
+        {"type": "result", "result": "\(inner)",
+         "usage": {"input_tokens": 100, "cache_creation_input_tokens": 20,
+                   "cache_read_input_tokens": 30, "output_tokens": 40},
+         "total_cost_usd": 0.01}
+        """
+        let reply = try XCTUnwrap(LLMExplainer.extract(envelope, provider: .claude))
+        XCTAssertEqual(reply.explanation.category, .appLeftover)
+        XCTAssertEqual(reply.usage?.inputTokens, 150)  // input + both cache buckets
+        XCTAssertEqual(reply.usage?.outputTokens, 40)
+    }
+
+    func testExtractFallsBackToRawParseWithoutEnvelope() throws {
+        // Non-envelope output (other providers, or claude behaving unexpectedly)
+        // still parses; usage is simply unknown.
+        let reply = try XCTUnwrap(LLMExplainer.extract(goodJSON, provider: .claude))
+        XCTAssertEqual(reply.explanation.category, .appLeftover)
+        XCTAssertNil(reply.usage)
+        let gemini = try XCTUnwrap(LLMExplainer.extract(goodJSON, provider: .gemini))
+        XCTAssertNil(gemini.usage)
+    }
+
     func testTimeoutKillsProcessThatIgnoresSIGTERM() throws {
         // A CLI that traps SIGTERM must still die (SIGKILL escalation) so a
         // stuck provider can't outlive its explain() call.
@@ -71,8 +96,9 @@ final class LLMExplainerTests: XCTestCase {
     func testProviderArgumentsRestrictTools() {
         // Folder names are untrusted input embedded in the prompt; the CLIs are
         // agentic, so every provider must be invoked with tool use locked down.
+        // claude additionally uses the JSON envelope so token usage is reported.
         XCTAssertEqual(LLMProvider.claude.arguments(prompt: "hi"),
-                       ["-p", "hi", "--disallowedTools",
+                       ["-p", "hi", "--output-format", "json", "--disallowedTools",
                         "Bash,Edit,Write,NotebookEdit,WebFetch,WebSearch,Task,Read,Glob,Grep"])
         XCTAssertEqual(LLMProvider.codex.arguments(prompt: "hi"),
                        ["exec", "--sandbox", "read-only", "--skip-git-repo-check", "hi"])
@@ -103,7 +129,7 @@ final class LLMExplainerTests: XCTestCase {
         let result = explainer.explain(path: "/tmp/whatever", sizeBytes: 1_000_000)
 
         XCTAssertNotNil(result)
-        XCTAssertEqual(result?.category, .appLeftover)
+        XCTAssertEqual(result?.explanation.category, .appLeftover)
     }
 
     // Fix 7: nominated rules must relate to the deleted path and not be trivially broad.

@@ -17,7 +17,7 @@ public enum LLMProvider: String, Codable, CaseIterable, Sendable {
     /// approval for tool actions, which cannot be granted in -p mode.
     public func arguments(prompt: String) -> [String] {
         switch self {
-        case .claude: return ["-p", prompt, "--disallowedTools",
+        case .claude: return ["-p", prompt, "--output-format", "json", "--disallowedTools",
                               "Bash,Edit,Write,NotebookEdit,WebFetch,WebSearch,Task,Read,Glob,Grep"]
         case .codex: return ["exec", "--sandbox", "read-only", "--skip-git-repo-check", prompt]
         case .gemini: return ["-p", prompt]
@@ -58,6 +58,19 @@ public struct LLMExplanation: Codable, Equatable, Sendable {
     }
 }
 
+public struct LLMUsage: Equatable, Sendable {
+    /// Prompt-side tokens, including cache creation and cache reads.
+    public var inputTokens: Int
+    public var outputTokens: Int
+    public var totalTokens: Int { inputTokens + outputTokens }
+}
+
+public struct LLMReply: Equatable, Sendable {
+    public var explanation: LLMExplanation
+    /// nil when the provider's output format does not report token usage.
+    public var usage: LLMUsage?
+}
+
 public final class LLMExplainer {
     public let provider: LLMProvider
     public let binaryPath: String
@@ -94,7 +107,39 @@ public final class LLMExplainer {
         return try? JSONDecoder().decode(LLMExplanation.self, from: data)
     }
 
-    public func explain(path: String, sizeBytes: Int64) -> LLMExplanation? {
+    /// claude --output-format json wraps the reply in an envelope carrying token usage.
+    private struct ClaudeEnvelope: Decodable {
+        struct Usage: Decodable {
+            let input_tokens: Int?
+            let cache_creation_input_tokens: Int?
+            let cache_read_input_tokens: Int?
+            let output_tokens: Int?
+        }
+        let result: String
+        let usage: Usage?
+    }
+
+    /// Turns raw CLI stdout into an explanation plus token usage where the
+    /// provider reports it (claude's JSON envelope). Falls back to plain parsing
+    /// for other providers or unexpected output shapes.
+    public static func extract(_ output: String, provider: LLMProvider) -> LLMReply? {
+        if provider == .claude,
+           let data = output.data(using: .utf8),
+           let envelope = try? JSONDecoder().decode(ClaudeEnvelope.self, from: data) {
+            guard let explanation = parse(envelope.result) else { return nil }
+            let usage = envelope.usage.map {
+                LLMUsage(inputTokens: ($0.input_tokens ?? 0)
+                            + ($0.cache_creation_input_tokens ?? 0)
+                            + ($0.cache_read_input_tokens ?? 0),
+                         outputTokens: $0.output_tokens ?? 0)
+            }
+            return LLMReply(explanation: explanation, usage: usage)
+        }
+        guard let explanation = parse(output) else { return nil }
+        return LLMReply(explanation: explanation, usage: nil)
+    }
+
+    public func explain(path: String, sizeBytes: Int64) -> LLMReply? {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: binaryPath)
         process.arguments = provider.arguments(prompt: Self.prompt(path: path, sizeBytes: sizeBytes))
@@ -131,6 +176,6 @@ public final class LLMExplainer {
         }
         guard process.terminationStatus == 0 else { return nil }
         drainDone.wait()
-        return Self.parse(String(data: stdoutData, encoding: .utf8) ?? "")
+        return Self.extract(String(data: stdoutData, encoding: .utf8) ?? "", provider: provider)
     }
 }
