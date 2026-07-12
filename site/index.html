@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cleanium — see what's safe to delete, and why</title>
+<meta name="description" content="A macOS menu-bar disk cleaner that explains every candidate in plain English: what it is, how risky it is, and how to get it back.">
+<link rel="icon" type="image/png" href="icon.png">
+<style>
+  :root {
+    --bg: #0b1512;
+    --panel: #10201b;
+    --line: #1d332c;
+    --text: #e8f4ef;
+    --muted: #93aca3;
+    --teal: #22a06b;
+    --mint: #73d9a6;
+    --grad: linear-gradient(135deg, #0a5c54 0%, #21a078 55%, #73d9a6 100%);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 17px/1.6 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 24px; }
+
+  header { padding: 88px 0 56px; text-align: center; position: relative; overflow: hidden; }
+  header::before {
+    content: ""; position: absolute; inset: -40% -20% auto;
+    height: 130%; background: radial-gradient(ellipse at 50% 0%, rgba(34,160,107,.28), transparent 65%);
+    pointer-events: none;
+  }
+  header > * { position: relative; }
+  .icon { width: 128px; height: 128px; margin-bottom: 20px;
+          filter: drop-shadow(0 12px 32px rgba(34,160,107,.35)); }
+  h1 { font-size: 48px; letter-spacing: -.02em; font-weight: 700; }
+  .tagline { font-size: 22px; color: var(--muted); margin: 12px auto 32px; max-width: 34em; }
+  .tagline strong { color: var(--mint); font-weight: 600; }
+
+  .cta { display: inline-flex; align-items: center; gap: 10px;
+         background: var(--grad); color: #06231a; font-weight: 700; font-size: 18px;
+         padding: 14px 28px; border-radius: 12px; text-decoration: none;
+         box-shadow: 0 8px 24px rgba(34,160,107,.35); transition: transform .12s ease; }
+  .cta:hover { transform: translateY(-2px); }
+  .cta svg { width: 20px; height: 20px; }
+  .sub { display: block; margin-top: 14px; font-size: 14px; color: var(--muted); }
+  .sub a { color: var(--mint); text-decoration: none; }
+
+  .grades { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 56px 0 0; }
+  .grade { display: flex; align-items: center; gap: 8px; background: var(--panel);
+           border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px 8px 8px;
+           font-size: 14px; color: var(--muted); }
+  .badge { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+           font-weight: 800; font-size: 13px; color: #08211a; }
+
+  section { padding: 64px 0; border-top: 1px solid var(--line); }
+  h2 { font-size: 28px; letter-spacing: -.01em; margin-bottom: 28px; }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px; }
+  .card h3 { font-size: 17px; margin-bottom: 8px; }
+  .card h3::before { content: "◆ "; color: var(--teal); font-size: 12px; vertical-align: 2px; }
+  .card p { font-size: 15px; color: var(--muted); }
+
+  .row { display: grid; grid-template-columns: 44px 1fr; gap: 16px; margin-bottom: 22px; }
+  .num { width: 36px; height: 36px; border-radius: 10px; background: var(--grad);
+         color: #06231a; font-weight: 800; display: grid; place-items: center; }
+  .row h3 { font-size: 17px; }
+  .row p { font-size: 15px; color: var(--muted); }
+
+  .note { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--teal);
+          border-radius: 10px; padding: 16px 20px; font-size: 15px; color: var(--muted); }
+  .note code { background: #0d1a16; border: 1px solid var(--line); border-radius: 5px;
+               padding: 1px 6px; font-size: 13px; color: var(--mint); }
+
+  footer { padding: 40px 0 64px; border-top: 1px solid var(--line);
+           font-size: 14px; color: var(--muted); text-align: center; }
+  footer a { color: var(--mint); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<header class="wrap">
+  <img class="icon" src="icon.png" alt="Cleanium app icon" width="128" height="128">
+  <h1>Cleanium</h1>
+  <p class="tagline">A macOS menu-bar disk cleaner that explains every candidate in plain English —
+    <strong>what it is, how risky it is, and how to get it back</strong> — before you delete anything.</p>
+  <a class="cta" href="https://github.com/getravi/cleanium/releases/latest/download/Cleanium.zip">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-5-5m5 5l5-5"/><path d="M4 19h16"/></svg>
+    Download for Mac
+  </a>
+  <span class="sub">Free &amp; open source · macOS 14+ · Apple Silicon ·
+    <a href="https://github.com/getravi/cleanium/releases/latest">all releases</a></span>
+
+  <div class="grades">
+    <span class="grade"><span class="badge" style="background:#4ade80">A</span> comes back by itself</span>
+    <span class="grade"><span class="badge" style="background:#2dd4bf">B</span> one command rebuilds it</span>
+    <span class="grade"><span class="badge" style="background:#60a5fa">C</span> can be downloaded again</span>
+    <span class="grade"><span class="badge" style="background:#f87171">D</span> your files — check first</span>
+  </div>
+</header>
+
+<section class="wrap">
+  <h2>How it works</h2>
+  <div class="row"><div class="num">1</div><div>
+    <h3>Scan</h3>
+    <p>Cleanium walks the folders you choose and matches what it finds against 29 built-in rules
+       for caches, build leftovers, AI model stores, and stale downloads. Results stream in live —
+       pause anytime and act on what's been found so far.</p></div></div>
+  <div class="row"><div class="num">2</div><div>
+    <h3>Understand</h3>
+    <p>Every candidate shows its full path, a plain-English explanation, a risk grade,
+       and exactly how to get it back if you ever need it. No mystery checkboxes.</p></div></div>
+  <div class="row"><div class="num">3</div><div>
+    <h3>Clean</h3>
+    <p>Everything goes to the Trash by default, so nothing is gone until you say so.
+       Permanent delete is a separate, explicit choice for items over 2&nbsp;GB.</p></div></div>
+</section>
+
+<section class="wrap">
+  <h2>Why it's different</h2>
+  <div class="cols">
+    <div class="card"><h3>Explains, never guesses for you</h3>
+      <p>Other cleaners show a number and a checkbox. Cleanium tells you what each folder is
+         and what deleting it costs you — then lets you decide.</p></div>
+    <div class="card"><h3>AI that uses what you already pay for</h3>
+      <p>Unknown large folders can be explained by your locally installed
+         <b>claude</b>, <b>codex</b>, or <b>gemini</b> CLI. Your subscription, your machine —
+         no API keys, and Cleanium itself never touches the network.</p></div>
+    <div class="card"><h3>Learns only with consent</h3>
+      <p>When the AI classifies something you delete, Cleanium offers to remember the rule.
+         Nothing is saved without your explicit approval — you're asked every time.</p></div>
+    <div class="card"><h3>Built for developers' disks</h3>
+      <p>node_modules, DerivedData, cargo and gradle caches, simulator images, Ollama and
+         Hugging Face models — the multi-gigabyte stuff other cleaners walk past.</p></div>
+    <div class="card"><h3>Open source, no dependencies</h3>
+      <p>Pure Swift and SwiftUI, zero third-party packages, MIT licensed.
+         Read every line before you trust it with your disk.</p></div>
+    <div class="card"><h3>Honest about cost</h3>
+      <p>AI calls show their token usage — input, cached, and output — right in the popover.
+         Folders are batched so you pay the CLI overhead once, not per folder.</p></div>
+  </div>
+</section>
+
+<section class="wrap">
+  <h2>Install</h2>
+  <p style="margin-bottom:16px">Unzip, drag <b>Cleanium.app</b> to Applications, then
+     <b>right-click&nbsp;→&nbsp;Open</b> the first time.</p>
+  <div class="note">Cleanium is ad-hoc signed, not notarized, so macOS asks for that one explicit
+    first open. Prefer building it yourself? <code>git clone</code> the repo and run
+    <code>./scripts/bundle.sh</code> — no Xcode project needed.</div>
+</section>
+
+<footer>
+  <p>MIT licensed · <a href="https://github.com/getravi/cleanium">Source on GitHub</a> ·
+     <a href="https://github.com/getravi/cleanium/issues">Report an issue</a></p>
+</footer>
+
+</body>
+</html>
