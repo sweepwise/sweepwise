@@ -14,6 +14,8 @@ cp .build/release/Cleanium "$APP/Contents/MacOS/Cleanium"
 # resolves the standard Contents/Resources location for a packaged .app — so we
 # ship the plain resource there instead of relying on SwiftPM's Bundle.module bundle.
 cp Sources/CleaniumCore/Resources/rules.json "$APP/Contents/Resources/rules.json"
+# App icon (regenerate with: swift scripts/make-icon.swift)
+cp Assets/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 
 cat > "$APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -22,6 +24,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key><string>Cleanium</string>
+    <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundleIdentifier</key><string>com.cleanium.app</string>
     <key>CFBundleName</key><string>Cleanium</string>
     <key>CFBundlePackageType</key><string>APPL</string>
