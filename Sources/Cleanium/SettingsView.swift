@@ -1,20 +1,25 @@
 import SwiftUI
 import CleaniumCore
 
+// The container observes nothing: if it watched AppState, every scan-progress
+// publish (~10/sec) would rebuild the TabView and make the tab icons flicker.
+// Each tab observes AppState itself, so re-renders stay inside the tab content.
 struct SettingsView: View {
-    @EnvironmentObject var state: AppState
-
     var body: some View {
         TabView {
-            generalTab.tabItem { Label("General", systemImage: "gearshape") }
-            rulesTab.tabItem { Label("Rules", systemImage: "list.bullet") }
-            aiTab.tabItem { Label("AI", systemImage: "sparkles") }
+            GeneralTab().tabItem { Label("General", systemImage: "gearshape") }
+            RulesTab().tabItem { Label("Rules", systemImage: "list.bullet") }
+            AITab().tabItem { Label("AI", systemImage: "sparkles") }
         }
         .frame(width: 520, height: 420)
         .padding()
     }
+}
 
-    private var generalTab: some View {
+private struct GeneralTab: View {
+    @EnvironmentObject var state: AppState
+
+    var body: some View {
         Form {
             Section("Scan roots") {
                 ForEach(state.settings.scanRoots, id: \.self) { root in
@@ -59,8 +64,12 @@ struct SettingsView: View {
             }
         }.formStyle(.grouped)
     }
+}
 
-    private var rulesTab: some View {
+private struct RulesTab: View {
+    @EnvironmentObject var state: AppState
+
+    var body: some View {
         Form {
             if let err = state.learnedLoadError {
                 Text(err).foregroundStyle(.red).font(.caption)
@@ -104,8 +113,12 @@ struct SettingsView: View {
             }
         }.formStyle(.grouped)
     }
+}
 
-    private var aiTab: some View {
+private struct AITab: View {
+    @EnvironmentObject var state: AppState
+
+    var body: some View {
         Form {
             let detected = Dictionary(uniqueKeysWithValues: LLMProvider.detectInstalled())
             Toggle("Explain unknown folders with AI",
