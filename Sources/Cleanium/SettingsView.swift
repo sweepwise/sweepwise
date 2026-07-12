@@ -62,7 +62,7 @@ private struct GeneralTab: View {
                     .toggleStyle(SwitchToggleStyle(tint: .green))
                 }
             }
-        }.formStyle(.grouped)
+        }.formStyle(.grouped).scrollContentBackground(.hidden)
     }
 }
 
@@ -118,6 +118,7 @@ private struct RulesTab: View {
             }
         }
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
         // Loaded once here, not in each row's body — the rules file never changes at runtime.
         .onAppear { bundled = (try? RuleEngine.loadBundledRules()) ?? [] }
     }
@@ -190,6 +191,6 @@ private struct AITab: View {
             Text("Uses your existing subscription via the local CLI. "
                  + "No API keys, no data sent by Cleanium itself.")
                 .font(.caption).foregroundStyle(.secondary)
-        }.formStyle(.grouped)
+        }.formStyle(.grouped).scrollContentBackground(.hidden)
     }
 }
