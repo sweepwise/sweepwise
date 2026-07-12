@@ -58,8 +58,7 @@ private struct GeneralTab: View {
                             if on { state.settings.enabledCategories.insert(cat) }
                             else { state.settings.enabledCategories.remove(cat) }
                         }))
-                    .toggleStyle(.switch)
-                    .tint(.green)
+                    .toggleStyle(SwitchToggleStyle(tint: .green))
                 }
             }
         }.formStyle(.grouped)
@@ -149,7 +148,7 @@ private struct BuiltInRuleRow: View {
                     if on { state.settings.disabledRuleIDs.remove(rule.id) }
                     else { state.settings.disabledRuleIDs.insert(rule.id) }
                 }))
-                .labelsHidden().toggleStyle(.switch).tint(.green)
+                .labelsHidden().toggleStyle(SwitchToggleStyle(tint: .green))
         }
         .opacity(enabled ? 1 : 0.45)
     }
@@ -164,8 +163,7 @@ private struct AITab: View {
             Toggle("Explain unknown folders with AI",
                    isOn: Binding(get: { state.settings.llmEnabled },
                                  set: { state.settings.llmEnabled = $0 }))
-                .toggleStyle(.switch)
-                .tint(.green)
+                .toggleStyle(SwitchToggleStyle(tint: .green))
                 .disabled(detected.isEmpty)
             if detected.isEmpty {
                 Text("No supported CLI found. Install claude, codex, or gemini.")
