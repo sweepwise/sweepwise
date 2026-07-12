@@ -18,6 +18,7 @@ struct MenuContentView: View {
             }
         }
         .frame(width: 460, height: 560, alignment: .top)
+        .background(VisualEffectBackground().ignoresSafeArea())
     }
 
     private var mainContent: some View {
@@ -131,6 +132,7 @@ struct MenuContentView: View {
             }
         }
         .listStyle(.inset)
+        .scrollContentBackground(.hidden)
     }
 
     /// Surfaces per-item trash failures after a deletion (Fix 3). Cleared when the
@@ -210,6 +212,20 @@ struct MenuContentView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
     }
+}
+
+/// Behind-window vibrancy for the popover — the translucent "skin" a plain
+/// MenuBarExtra window doesn't get by default.
+struct VisualEffectBackground: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = .popover
+        view.blendingMode = .behindWindow
+        view.state = .active
+        return view
+    }
+
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
 }
 
 struct CandidateRow: View {
