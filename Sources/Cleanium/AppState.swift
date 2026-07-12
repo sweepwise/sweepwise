@@ -119,8 +119,11 @@ final class AppState: ObservableObject {
         learnedLoadError = learnedStore.lastLoadError
         let bundled: [Rule]
         do {
-            bundled = try RuleEngine.loadBundledRules()
-            ruleLoadError = bundled.isEmpty
+            let all = try RuleEngine.loadBundledRules()
+            bundled = all.filter { !settings.disabledRuleIDs.contains($0.id) }
+            // Judge emptiness on the raw file, not the filtered list — the user
+            // disabling every rule is a choice, not a packaging failure.
+            ruleLoadError = all.isEmpty
                 ? "Built-in rules file is empty — scans will find almost nothing. Try reinstalling Cleanium."
                 : nil
         } catch {

@@ -21,6 +21,8 @@ public final class SettingsStore: ObservableObject {
     @Published public var llmEnabled: Bool { didSet { save() } }
     @Published public var llmProvider: LLMProvider { didSet { save() } }
     @Published public var llmMinSizeMB: Int { didSet { save() } }
+    /// Built-in rule ids the user has switched off; they are skipped during scans.
+    @Published public var disabledRuleIDs: Set<String> { didSet { save() } }
 
     private let defaults: UserDefaults
     private var loading = true
@@ -39,6 +41,7 @@ public final class SettingsStore: ObservableObject {
         llmProvider = LLMProvider(rawValue:
             defaults.string(forKey: "cleanium.llmProvider") ?? "") ?? .claude
         llmMinSizeMB = defaults.object(forKey: "cleanium.llmMinSizeMB") as? Int ?? 500
+        disabledRuleIDs = Set(defaults.stringArray(forKey: "cleanium.disabledRuleIDs") ?? [])
         loading = false
     }
 
@@ -52,5 +55,6 @@ public final class SettingsStore: ObservableObject {
         defaults.set(llmEnabled, forKey: "cleanium.llmEnabled")
         defaults.set(llmProvider.rawValue, forKey: "cleanium.llmProvider")
         defaults.set(llmMinSizeMB, forKey: "cleanium.llmMinSizeMB")
+        defaults.set(disabledRuleIDs.sorted(), forKey: "cleanium.disabledRuleIDs")
     }
 }

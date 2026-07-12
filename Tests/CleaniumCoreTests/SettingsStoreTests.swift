@@ -43,6 +43,14 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(s2.enabledCategories, [.cache])
     }
 
+    func testDisabledRuleIDsPersist() {
+        let s1 = SettingsStore(defaults: defaults)
+        XCTAssertEqual(s1.disabledRuleIDs, [])
+        s1.disabledRuleIDs = ["node-modules", "dmg-files"]
+        let s2 = SettingsStore(defaults: defaults)
+        XCTAssertEqual(s2.disabledRuleIDs, ["node-modules", "dmg-files"])
+    }
+
     func testDefaultRootsAreUnderHome() {
         for root in SettingsStore.defaultRoots {
             XCTAssertTrue(root.hasPrefix(NSHomeDirectory()), root)

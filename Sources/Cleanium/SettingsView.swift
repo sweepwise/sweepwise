@@ -69,6 +69,8 @@ private struct GeneralTab: View {
 private struct RulesTab: View {
     @EnvironmentObject var state: AppState
 
+    @State private var bundled: [Rule] = []
+
     var body: some View {
         Form {
             if let err = state.learnedLoadError {
@@ -106,12 +108,50 @@ private struct RulesTab: View {
                     }
                 }
             }
-            Section("Built-in rules (read-only)") {
-                let bundled = (try? RuleEngine.loadBundledRules()) ?? []
-                Text("\(bundled.count) rules covering caches, dev artifacts, LLM models, "
-                     + "app leftovers, downloads.").font(.caption)
+            Section("Built-in rules") {
+                Text("These ship with Cleanium. Switch one off to stop it matching "
+                     + "during scans — nothing is deleted, and you can switch it back on.")
+                    .font(.caption).foregroundStyle(.secondary)
+                ForEach(bundled) { rule in
+                    BuiltInRuleRow(rule: rule)
+                }
             }
-        }.formStyle(.grouped)
+        }
+        .formStyle(.grouped)
+        // Loaded once here, not in each row's body — the rules file never changes at runtime.
+        .onAppear { bundled = (try? RuleEngine.loadBundledRules()) ?? [] }
+    }
+}
+
+private struct BuiltInRuleRow: View {
+    @EnvironmentObject var state: AppState
+    let rule: Rule
+
+    var body: some View {
+        let enabled = !state.settings.disabledRuleIDs.contains(rule.id)
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(rule.pattern).font(.system(.caption, design: .monospaced)).bold()
+                    Text(rule.category.rawValue)
+                        .font(.caption2).padding(.horizontal, 4)
+                        .background(.quaternary, in: Capsule())
+                }
+                Text(rule.context).font(.caption).foregroundStyle(.secondary)
+                Text(rule.risk.label).font(.caption2).foregroundStyle(rule.risk.color)
+                Text("If you need it back: \(rule.restoreNote)")
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Toggle("", isOn: Binding(
+                get: { !state.settings.disabledRuleIDs.contains(rule.id) },
+                set: { on in
+                    if on { state.settings.disabledRuleIDs.remove(rule.id) }
+                    else { state.settings.disabledRuleIDs.insert(rule.id) }
+                }))
+                .labelsHidden().toggleStyle(.switch).tint(.green)
+        }
+        .opacity(enabled ? 1 : 0.45)
     }
 }
 
