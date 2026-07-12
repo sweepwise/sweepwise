@@ -258,8 +258,13 @@ final class PopoverMaterialTuner: NSView {
 private final class TransparentWindowEffectView: NSVisualEffectView {
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        window?.isOpaque = false
-        window?.backgroundColor = .clear
+        guard let window else { return }
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        // Run the blur under the titlebar too — otherwise the top strip stays
+        // an opaque white band above translucent content.
+        window.titlebarAppearsTransparent = true
+        window.styleMask.insert(.fullSizeContentView)
     }
 }
 
