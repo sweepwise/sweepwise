@@ -221,7 +221,7 @@ struct MenuContentView: View {
 /// the system default by lowering the frame's own effect-view alpha.
 final class PopoverMaterialTuner: NSView {
     /// 1.0 = system default frost; lower = more desktop showing through.
-    static let materialAlpha: CGFloat = 0.72
+    static let materialAlpha: CGFloat = 0.45
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
