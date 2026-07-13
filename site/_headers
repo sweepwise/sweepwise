@@ -1,0 +1,11 @@
+# Cloudflare Pages headers. https://developers.cloudflare.com/pages/configuration/headers/
+
+# Static, content-stable asset — cache aggressively in the browser.
+/icon.png
+  Cache-Control: public, max-age=31536000, immutable
+
+# HTML must revalidate so version/size text and copy updates go live on deploy.
+/
+  Cache-Control: public, max-age=0, must-revalidate
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
