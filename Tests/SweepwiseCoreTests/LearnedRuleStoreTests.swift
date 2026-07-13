@@ -1,5 +1,5 @@
 import XCTest
-@testable import CleaniumCore
+@testable import SweepwiseCore
 
 final class LearnedRuleStoreTests: XCTestCase {
     var dir: URL!
@@ -7,7 +7,7 @@ final class LearnedRuleStoreTests: XCTestCase {
 
     override func setUpWithError() throws {
         dir = FileManager.default.temporaryDirectory
-            .appendingPathComponent("cleanium-tests-\(UUID().uuidString)")
+            .appendingPathComponent("sweepwise-tests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         store = LearnedRuleStore(fileURL: dir.appendingPathComponent("learned-rules.json"))
     }

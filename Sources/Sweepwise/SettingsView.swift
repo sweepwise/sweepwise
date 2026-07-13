@@ -1,5 +1,5 @@
 import SwiftUI
-import CleaniumCore
+import SweepwiseCore
 
 // The container observes nothing: if it watched AppState, every scan-progress
 // publish (~10/sec) would rebuild the TabView and make the tab icons flicker.
@@ -109,7 +109,7 @@ private struct RulesTab: View {
                 }
             }
             Section("Built-in rules") {
-                Text("These ship with Cleanium. Switch one off to stop it matching "
+                Text("These ship with Sweepwise. Switch one off to stop it matching "
                      + "during scans — nothing is deleted, and you can switch it back on.")
                     .font(.caption).foregroundStyle(.secondary)
                 ForEach(bundled) { rule in
@@ -188,14 +188,14 @@ private struct AITab: View {
             }
 
             Section("Setting up a provider") {
-                Text("Cleanium runs your own installed CLI — no API keys, and it uses the "
+                Text("Sweepwise runs your own installed CLI — no API keys, and it uses the "
                      + "subscription you already pay for. Install one, sign in once by running "
                      + "it in Terminal, then pick it above.")
                     .font(.caption).foregroundStyle(.secondary)
                 ForEach(LLMProvider.allCases, id: \.self) { provider in
                     providerSetupRow(provider, installed: detected[provider] != nil)
                 }
-                Text("Cleanium looks for the CLI in /opt/homebrew/bin, /usr/local/bin, "
+                Text("Sweepwise looks for the CLI in /opt/homebrew/bin, /usr/local/bin, "
                      + "~/.local/bin, ~/bin, and ~/.bun/bin. If yours lives elsewhere, symlink "
                      + "it into one of those folders.")
                     .font(.caption2).foregroundStyle(.secondary)

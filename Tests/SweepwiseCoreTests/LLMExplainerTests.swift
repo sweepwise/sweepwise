@@ -1,5 +1,5 @@
 import XCTest
-@testable import CleaniumCore
+@testable import SweepwiseCore
 
 final class LLMExplainerTests: XCTestCase {
     let goodJSON = """
@@ -110,7 +110,7 @@ final class LLMExplainerTests: XCTestCase {
         // A CLI that traps SIGTERM must still die (SIGKILL escalation) so a
         // stuck provider can't outlive its explain() call.
         let dir = FileManager.default.temporaryDirectory
-            .appendingPathComponent("cleanium-kill-\(UUID().uuidString)")
+            .appendingPathComponent("sweepwise-kill-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: dir) }
         let script = dir.appendingPathComponent("stubborn")
@@ -156,7 +156,7 @@ final class LLMExplainerTests: XCTestCase {
 
     func testExplainDrainsLargeStdoutWithoutDeadlock() throws {
         let dir = FileManager.default.temporaryDirectory
-            .appendingPathComponent("cleanium-llm-\(UUID().uuidString)")
+            .appendingPathComponent("sweepwise-llm-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: dir) }
         let script = dir.appendingPathComponent("fake-claude")
@@ -211,7 +211,7 @@ final class LLMExplainerTests: XCTestCase {
 
     func testDetectInstalledFindsBinariesInSearchPath() throws {
         let dir = FileManager.default.temporaryDirectory
-            .appendingPathComponent("cleanium-bin-\(UUID().uuidString)")
+            .appendingPathComponent("sweepwise-bin-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: dir) }
         let fake = dir.appendingPathComponent("claude")

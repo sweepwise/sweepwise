@@ -1,27 +1,27 @@
 #!/bin/bash
-# Notarize and staple Cleanium.app, then produce a distributable zip.
+# Notarize and staple Sweepwise.app, then produce a distributable zip.
 #
 # One-time prerequisites (yours to do — see docs/NOTARIZING.md):
 #   1. Apple Developer Program membership ($99/yr).
 #   2. A "Developer ID Application" certificate in your login keychain.
 #   3. A stored notarytool credential profile:
-#        xcrun notarytool store-credentials cleanium-notary \
+#        xcrun notarytool store-credentials sweepwise-notary \
 #          --apple-id "you@example.com" --team-id "TEAMID" \
 #          --password "app-specific-password"
 #
 # Usage:
-#   CLEANIUM_SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
+#   SWEEPWISE_SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
 #     ./scripts/notarize.sh
-# Optional: NOTARY_PROFILE (default: cleanium-notary)
+# Optional: NOTARY_PROFILE (default: sweepwise-notary)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-: "${CLEANIUM_SIGN_IDENTITY:?Set CLEANIUM_SIGN_IDENTITY to your Developer ID Application identity}"
-PROFILE="${NOTARY_PROFILE:-cleanium-notary}"
-APP=dist/Cleanium.app
-ZIP=dist/Cleanium.zip
+: "${SWEEPWISE_SIGN_IDENTITY:?Set SWEEPWISE_SIGN_IDENTITY to your Developer ID Application identity}"
+PROFILE="${NOTARY_PROFILE:-sweepwise-notary}"
+APP=dist/Sweepwise.app
+ZIP=dist/Sweepwise.zip
 
-# 1. Build + sign with hardened runtime (bundle.sh honors CLEANIUM_SIGN_IDENTITY).
+# 1. Build + sign with hardened runtime (bundle.sh honors SWEEPWISE_SIGN_IDENTITY).
 ./scripts/bundle.sh
 
 # 2. Verify the signature is Developer-ID + hardened runtime before wasting a submission.

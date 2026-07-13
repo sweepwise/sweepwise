@@ -1,5 +1,5 @@
 import XCTest
-@testable import CleaniumCore
+@testable import SweepwiseCore
 
 final class RuleEngineTests: XCTestCase {
     let old = Date(timeIntervalSinceNow: -90 * 86400)

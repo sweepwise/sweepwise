@@ -7,7 +7,7 @@ public final class LearnedRuleStore {
     public convenience init() {
         let base = FileManager.default.urls(for: .applicationSupportDirectory,
                                             in: .userDomainMask)[0]
-            .appendingPathComponent("Cleanium")
+            .appendingPathComponent("Sweepwise")
         try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
         self.init(fileURL: base.appendingPathComponent("learned-rules.json"))
     }

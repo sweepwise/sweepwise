@@ -15,7 +15,7 @@ final class StatusBarController: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.button?.image = NSImage(systemSymbolName: "internaldrive",
-                                     accessibilityDescription: "Cleanium")
+                                     accessibilityDescription: "Sweepwise")
         item.button?.action = #selector(toggleDropdown)
         item.button?.target = self
         statusItem = item
@@ -84,7 +84,7 @@ private final class KeyablePanel: NSPanel {
 }
 
 @main
-struct CleaniumApp: App {
+struct SweepwiseApp: App {
     @NSApplicationDelegateAdaptor(StatusBarController.self) private var statusBar
 
     var body: some Scene {

@@ -1,12 +1,12 @@
 import XCTest
-@testable import CleaniumCore
+@testable import SweepwiseCore
 
 final class ScannerTests: XCTestCase {
     var root: URL!
 
     override func setUpWithError() throws {
         root = FileManager.default.temporaryDirectory
-            .appendingPathComponent("cleanium-scan-\(UUID().uuidString)")
+            .appendingPathComponent("sweepwise-scan-\(UUID().uuidString)")
         // Fixture tree:
         // root/projA/node_modules/dep/big.bin   (2 KB)   -> candidate (rule nm)
         // root/projA/src/main.js                (10 B)   -> plain file
@@ -27,10 +27,10 @@ final class ScannerTests: XCTestCase {
         try? FileManager.default.removeItem(at: root)
     }
 
-    func makeScanner(minSize: Int64 = 0, llmMin: Int64 = 1024) -> CleaniumCore.Scanner {
+    func makeScanner(minSize: Int64 = 0, llmMin: Int64 = 1024) -> SweepwiseCore.Scanner {
         let nm = Rule(id: "nm", pattern: "node_modules", category: .devArtifact,
                       risk: .rebuildable, context: "c", restoreNote: "r")
-        return CleaniumCore.Scanner(engine: RuleEngine(bundled: [nm], learned: []),
+        return SweepwiseCore.Scanner(engine: RuleEngine(bundled: [nm], learned: []),
                                     minSizeBytes: minSize, llmMinSizeBytes: llmMin)
     }
 
@@ -66,9 +66,9 @@ final class ScannerTests: XCTestCase {
     }
 
     func testMissingRootGoesToSkipped() {
-        let result = makeScanner().scan(roots: ["/nonexistent-cleanium-root"],
+        let result = makeScanner().scan(roots: ["/nonexistent-sweepwise-root"],
                                         progress: nil, isCancelled: { false })
-        XCTAssertEqual(result.skipped, ["/nonexistent-cleanium-root"])
+        XCTAssertEqual(result.skipped, ["/nonexistent-sweepwise-root"])
     }
 
     func testCandidatesStreamedViaCallback() {

@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 import Combine
-import CleaniumCore
+import SweepwiseCore
 
 /// Thread-safe flag shared between the MainActor and the detached scan task
 /// (used for both cancellation and pause). `MainActor.assumeIsolated` would trap
@@ -124,15 +124,15 @@ final class AppState: ObservableObject {
             // Judge emptiness on the raw file, not the filtered list — the user
             // disabling every rule is a choice, not a packaging failure.
             ruleLoadError = all.isEmpty
-                ? "Built-in rules file is empty — scans will find almost nothing. Try reinstalling Cleanium."
+                ? "Built-in rules file is empty — scans will find almost nothing. Try reinstalling Sweepwise."
                 : nil
         } catch {
             bundled = []
-            ruleLoadError = "Could not load built-in rules — scans will find almost nothing. Try reinstalling Cleanium."
+            ruleLoadError = "Could not load built-in rules — scans will find almost nothing. Try reinstalling Sweepwise."
         }
         let engine = RuleEngine(bundled: bundled, learned: learned,
                                 downloadStalenessOverrideDays: settings.stalenessDays)
-        let scanner = CleaniumCore.Scanner(
+        let scanner = SweepwiseCore.Scanner(
             engine: engine,
             minSizeBytes: Int64(settings.minSizeMB) * 1_000_000,
             llmMinSizeBytes: Int64(settings.llmMinSizeMB) * 1_000_000)

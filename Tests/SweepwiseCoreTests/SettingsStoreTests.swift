@@ -1,12 +1,12 @@
 import XCTest
-@testable import CleaniumCore
+@testable import SweepwiseCore
 
 final class SettingsStoreTests: XCTestCase {
     var defaults: UserDefaults!
     var suiteName: String!
 
     override func setUp() {
-        suiteName = "cleanium-tests-\(UUID().uuidString)"
+        suiteName = "sweepwise-tests-\(UUID().uuidString)"
         defaults = UserDefaults(suiteName: suiteName)
     }
 

@@ -1,5 +1,5 @@
 import XCTest
-@testable import CleaniumCore
+@testable import SweepwiseCore
 
 final class TrashServiceTests: XCTestCase {
     var dir: URL!
@@ -7,7 +7,7 @@ final class TrashServiceTests: XCTestCase {
 
     override func setUpWithError() throws {
         dir = FileManager.default.temporaryDirectory
-            .appendingPathComponent("cleanium-trash-\(UUID().uuidString)")
+            .appendingPathComponent("sweepwise-trash-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
     }
 

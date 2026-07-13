@@ -1,6 +1,6 @@
-# Notarizing Cleanium
+# Notarizing Sweepwise
 
-Notarization lets users open Cleanium normally instead of the current
+Notarization lets users open Sweepwise normally instead of the current
 right-click → Open dance. macOS Gatekeeper stops warning once the app is
 signed with a **Developer ID** certificate, scanned by Apple's notary service,
 and has the resulting ticket stapled to it.
@@ -29,7 +29,7 @@ one-time account setup only you can do.
    https://appleid.apple.com → Sign-In and Security → App-Specific Passwords):
 
    ```
-   xcrun notarytool store-credentials cleanium-notary \
+   xcrun notarytool store-credentials sweepwise-notary \
      --apple-id "you@example.com" \
      --team-id "AB12CD34EF" \
      --password "abcd-efgh-ijkl-mnop"
@@ -38,20 +38,20 @@ one-time account setup only you can do.
 ## Every release
 
 ```
-CLEANIUM_SIGN_IDENTITY="Developer ID Application: Jane Doe (AB12CD34EF)" \
+SWEEPWISE_SIGN_IDENTITY="Developer ID Application: Jane Doe (AB12CD34EF)" \
   ./scripts/notarize.sh
 ```
 
 That builds the universal binary, signs it with a hardened runtime, uploads it
 to Apple, waits for the result, staples the ticket, and re-zips
-`dist/Cleanium.zip` ready to attach to a GitHub release.
+`dist/Sweepwise.zip` ready to attach to a GitHub release.
 
 ## Notes
 
-- **No entitlements needed.** Cleanium loads no plugins and isn't sandboxed;
+- **No entitlements needed.** Sweepwise loads no plugins and isn't sandboxed;
   the default hardened runtime is enough. Shelling out to the AI CLIs via
   `Process` is allowed under the hardened runtime.
 - If notarization is rejected, `xcrun notarytool log <submission-id>
-  --keychain-profile cleanium-notary` prints the exact reason.
+  --keychain-profile sweepwise-notary` prints the exact reason.
 - The stapled app works fully offline — the ticket is embedded, so Gatekeeper
   doesn't need to phone home on first launch.

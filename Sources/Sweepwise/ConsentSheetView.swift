@@ -1,5 +1,5 @@
 import SwiftUI
-import CleaniumCore
+import SweepwiseCore
 
 struct ConsentSheetView: View {
     @EnvironmentObject var state: AppState

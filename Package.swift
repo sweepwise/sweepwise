@@ -2,20 +2,20 @@
 import PackageDescription
 
 let package = Package(
-    name: "Cleanium",
+    name: "Sweepwise",
     platforms: [.macOS(.v14)],
     targets: [
         .target(
-            name: "CleaniumCore",
+            name: "SweepwiseCore",
             resources: [.copy("Resources/rules.json")]
         ),
         .executableTarget(
-            name: "Cleanium",
-            dependencies: ["CleaniumCore"]
+            name: "Sweepwise",
+            dependencies: ["SweepwiseCore"]
         ),
         .testTarget(
-            name: "CleaniumCoreTests",
-            dependencies: ["CleaniumCore"]
+            name: "SweepwiseCoreTests",
+            dependencies: ["SweepwiseCore"]
         ),
     ]
 )

@@ -1,6 +1,6 @@
 import Foundation
 import SwiftUI
-import CleaniumCore
+import SweepwiseCore
 
 enum Fmt {
     static func bytes(_ n: Int64) -> String {
@@ -41,7 +41,7 @@ extension Risk {
 extension Provenance {
     var label: String {
         switch self {
-        case .bundled: return "Cleanium's built-in knowledge"
+        case .bundled: return "Sweepwise's built-in knowledge"
         case .learned: return "a rule you approved earlier"
         case .llm(let p): return "AI (\(p))"
         }

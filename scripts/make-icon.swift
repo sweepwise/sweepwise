@@ -89,7 +89,7 @@ let fm = FileManager.default
 let root = URL(fileURLWithPath: CommandLine.arguments.first!)
     .deletingLastPathComponent().deletingLastPathComponent()
 let assets = root.appendingPathComponent("Assets")
-let iconset = assets.appendingPathComponent("Cleanium.iconset")
+let iconset = assets.appendingPathComponent("Sweepwise.iconset")
 try? fm.removeItem(at: iconset)
 try! fm.createDirectory(at: iconset, withIntermediateDirectories: true)
 

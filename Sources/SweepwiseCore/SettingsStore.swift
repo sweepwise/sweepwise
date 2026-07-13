@@ -29,32 +29,32 @@ public final class SettingsStore: ObservableObject {
 
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        scanRoots = defaults.stringArray(forKey: "cleanium.scanRoots") ?? Self.defaultRoots
-        if let raw = defaults.stringArray(forKey: "cleanium.enabledCategories") {
+        scanRoots = defaults.stringArray(forKey: "sweepwise.scanRoots") ?? Self.defaultRoots
+        if let raw = defaults.stringArray(forKey: "sweepwise.enabledCategories") {
             enabledCategories = Set(raw.compactMap(Category.init(rawValue:)))
         } else {
             enabledCategories = Set(Category.allCases)
         }
-        stalenessDays = defaults.object(forKey: "cleanium.stalenessDays") as? Int ?? 60
-        minSizeMB = defaults.object(forKey: "cleanium.minSizeMB") as? Int ?? 50
-        llmEnabled = defaults.bool(forKey: "cleanium.llmEnabled")
+        stalenessDays = defaults.object(forKey: "sweepwise.stalenessDays") as? Int ?? 60
+        minSizeMB = defaults.object(forKey: "sweepwise.minSizeMB") as? Int ?? 50
+        llmEnabled = defaults.bool(forKey: "sweepwise.llmEnabled")
         llmProvider = LLMProvider(rawValue:
-            defaults.string(forKey: "cleanium.llmProvider") ?? "") ?? .claude
-        llmMinSizeMB = defaults.object(forKey: "cleanium.llmMinSizeMB") as? Int ?? 500
-        disabledRuleIDs = Set(defaults.stringArray(forKey: "cleanium.disabledRuleIDs") ?? [])
+            defaults.string(forKey: "sweepwise.llmProvider") ?? "") ?? .claude
+        llmMinSizeMB = defaults.object(forKey: "sweepwise.llmMinSizeMB") as? Int ?? 500
+        disabledRuleIDs = Set(defaults.stringArray(forKey: "sweepwise.disabledRuleIDs") ?? [])
         loading = false
     }
 
     private func save() {
         guard !loading else { return }
-        defaults.set(scanRoots, forKey: "cleanium.scanRoots")
+        defaults.set(scanRoots, forKey: "sweepwise.scanRoots")
         defaults.set(enabledCategories.map(\.rawValue).sorted(),
-                     forKey: "cleanium.enabledCategories")
-        defaults.set(stalenessDays, forKey: "cleanium.stalenessDays")
-        defaults.set(minSizeMB, forKey: "cleanium.minSizeMB")
-        defaults.set(llmEnabled, forKey: "cleanium.llmEnabled")
-        defaults.set(llmProvider.rawValue, forKey: "cleanium.llmProvider")
-        defaults.set(llmMinSizeMB, forKey: "cleanium.llmMinSizeMB")
-        defaults.set(disabledRuleIDs.sorted(), forKey: "cleanium.disabledRuleIDs")
+                     forKey: "sweepwise.enabledCategories")
+        defaults.set(stalenessDays, forKey: "sweepwise.stalenessDays")
+        defaults.set(minSizeMB, forKey: "sweepwise.minSizeMB")
+        defaults.set(llmEnabled, forKey: "sweepwise.llmEnabled")
+        defaults.set(llmProvider.rawValue, forKey: "sweepwise.llmProvider")
+        defaults.set(llmMinSizeMB, forKey: "sweepwise.llmMinSizeMB")
+        defaults.set(disabledRuleIDs.sorted(), forKey: "sweepwise.disabledRuleIDs")
     }
 }

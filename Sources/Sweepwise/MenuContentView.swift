@@ -1,5 +1,5 @@
 import SwiftUI
-import CleaniumCore
+import SweepwiseCore
 
 struct MenuContentView: View {
     @EnvironmentObject var state: AppState
@@ -45,14 +45,14 @@ struct MenuContentView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text("Cleanium").font(.headline)
+                Text("Sweepwise").font(.headline)
                 Spacer()
                 diskGauge
                 SettingsLink { Image(systemName: "gearshape") }
                 Button { NSApplication.shared.terminate(nil) } label: {
                     Image(systemName: "power")
                 }
-                .help("Quit Cleanium")
+                .help("Quit Sweepwise")
                 .keyboardShortcut("q")
             }
             HStack {

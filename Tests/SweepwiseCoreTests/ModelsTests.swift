@@ -1,5 +1,5 @@
 import XCTest
-@testable import CleaniumCore
+@testable import SweepwiseCore
 
 final class ModelsTests: XCTestCase {
     func testRuleDecodesFromJSON() throws {
