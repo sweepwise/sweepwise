@@ -44,8 +44,8 @@ say "Moving to /Applications…"
 rm -rf "$DEST"
 mv "$TMP/$APP" "$DEST"
 
-# The app is ad-hoc signed, not notarized. Clearing the quarantine flag lets it
-# open normally instead of forcing the right-click → Open dance.
+# Releases are notarized since v0.1.4, so this is now just a belt-and-braces
+# cleanup; it also keeps installs of older releases working.
 xattr -dr com.apple.quarantine "$DEST" 2>/dev/null || true
 
 # Set the app to launch at login. First try a real Login Item (shows in
