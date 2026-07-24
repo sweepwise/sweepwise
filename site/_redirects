@@ -1,6 +1,6 @@
 # Cloudflare Pages redirects. https://developers.cloudflare.com/pages/configuration/redirects/
-# www serves the same deployment as the apex; 301 it so one URL wins.
-https://www.sweepwise.app/* https://sweepwise.app/:splat 301
+# NOTE: www → apex is a Cloudflare Redirect Rule in the dashboard, not here —
+# Pages _redirects only supports relative-path sources, host rules are ignored.
 
 # Branded short URLs; 302 so a future move (e.g. notarized assets) takes effect immediately.
 /install.sh https://raw.githubusercontent.com/sweepwise/sweepwise/main/scripts/install.sh 302
