@@ -25,8 +25,11 @@ ZIP=dist/Sweepwise.zip
 ./scripts/bundle.sh
 
 # 2. Verify the signature is Developer-ID + hardened runtime before wasting a submission.
+# Capture first: with pipefail, `codesign | grep -q` can fail on SIGPIPE when
+# grep exits at first match while codesign is still writing.
 codesign --verify --strict --verbose=2 "$APP"
-codesign -dvv "$APP" 2>&1 | grep -q "flags=.*runtime" \
+SIGN_INFO="$(codesign -dvv "$APP" 2>&1)"
+echo "$SIGN_INFO" | grep "flags=.*runtime" >/dev/null \
   || { echo "error: hardened runtime not set on $APP"; exit 1; }
 
 # 3. Notarization needs a zip (or dmg) to upload; --wait blocks until Apple responds.
